@@ -1,0 +1,10 @@
+{
+  "expo": {
+    "name": "Skin Lesion",
+    "slug": "skin-lesion",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "ios": { "supportsTablet": true },
+    "android": {}
+  }
+}
