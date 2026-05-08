@@ -2,7 +2,7 @@ from fastapi import FastAPI
 
 from .routers import predictions, scans
 
-app = FastAPI(title="Skin Lesion API")
+app = FastAPI(title="CLEAR API")
 
 # Auth is handled directly by the mobile app via the Supabase JS client.
 # The backend validates the JWT on each request but does not proxy auth calls.

@@ -4,7 +4,7 @@ import { SafeAreaView, Text, StyleSheet } from "react-native";
 export default function App() {
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Skin Lesion</Text>
+      <Text style={styles.title}>CLEAR</Text>
       <Text>Skeleton app — wire up auth, capture, history.</Text>
     </SafeAreaView>
   );
