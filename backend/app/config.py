@@ -1,14 +1,13 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from hosted_database import create_client, Client
 
 
 class Settings(BaseSettings):
-    hosted_database_url: str = ""
-    hosted_database_service_role_key: str = ""
-    model_path: str = "../ml/models/lesion_classifier_binary.pt"
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    class Config:
-        env_file = ".env"
+    hosted_database_url: str
+    hosted_database_service_role_key: str
+    model_path: str = "../ml/models/lesion_classifier_binary.pt"
 
 
 settings = Settings()
