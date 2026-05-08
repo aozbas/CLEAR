@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "hosted_database": {
+      "type": "http",
+      "url": "https://mcp.hosted_database.com/mcp?project_ref=nhacpttjwrxyqodcvyfl&read_only=true&features=database%2Cdebugging%2Cdocs"
+    }
+  }
+}
