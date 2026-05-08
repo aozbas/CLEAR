@@ -4,4 +4,6 @@ __pycache__/
 node_modules/
 .expo/
 .env
+.env.*
+!.env.example
 ml/models/*.pt
