@@ -5,3 +5,5 @@ pydantic-settings
 python-multipart
 hosted_database
 httpx
+torch
+torchvision
