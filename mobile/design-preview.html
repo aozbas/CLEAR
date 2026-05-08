@@ -1,0 +1,967 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>CLEAR — Design Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --bg: #F0EEE6;
+  --surface: #FAF9F5;
+  --surface-2: #FFFFFF;
+  --text: #191919;
+  --muted: #6B6B6B;
+  --line: rgba(25,25,25,0.08);
+  --line-strong: rgba(25,25,25,0.14);
+  --accent: #D97757;
+  --accent-pressed: #C56843;
+  --accent-tint: rgba(217,119,87,0.1);
+  --calm: #3D5A48;
+  --calm-tint: rgba(74,107,87,0.1);
+  --error: #A03E3E;
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 18px;
+  --r-pill: 999px;
+  --serif: "Source Serif 4", Georgia, serif;
+  --sans: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  padding: 48px 24px 96px;
+}
+.wrap { max-width: 1240px; margin: 0 auto; }
+
+.header { margin-bottom: 56px; }
+.header h1 {
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: 48px;
+  letter-spacing: -0.02em;
+  margin: 0 0 8px;
+}
+.header p {
+  color: var(--muted);
+  font-size: 16px;
+  margin: 0;
+  max-width: 720px;
+}
+
+.section-title {
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 64px 0 24px;
+}
+
+.phones {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px 32px;
+  align-items: start;
+  margin-bottom: 56px;
+}
+@media (max-width: 900px) { .phones { grid-template-columns: 1fr; } }
+
+.phone {
+  background: #1A1A1A;
+  border-radius: 44px;
+  padding: 12px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08), 0 16px 40px -8px rgba(0,0,0,0.18);
+}
+.screen {
+  background: var(--bg);
+  border-radius: 32px;
+  height: 760px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+.notch {
+  height: 32px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 24px;
+  font-size: 13px; font-weight: 600;
+}
+.notch::before { content: "9:41"; }
+.notch::after { content: "•••"; color: var(--muted); letter-spacing: -1px; }
+
+.screen-label {
+  text-align: center;
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--muted);
+  font-size: 14px;
+  margin-top: 14px;
+}
+
+.app-bar {
+  padding: 8px 24px 0;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.wordmark {
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+}
+.bar-link {
+  font-size: 14px; color: var(--muted); text-decoration: none;
+}
+.bar-back { font-size: 14px; color: var(--muted); }
+
+.body {
+  flex: 1;
+  padding: 24px 24px 40px;
+  display: flex; flex-direction: column; gap: 16px;
+  overflow-y: auto;
+  -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to bottom, black calc(100% - 28px), transparent);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(25,25,25,0.18) transparent;
+}
+.body::-webkit-scrollbar { width: 5px; }
+.body::-webkit-scrollbar-track { background: transparent; }
+.body::-webkit-scrollbar-thumb {
+  background: rgba(25,25,25,0.18);
+  border-radius: 999px;
+}
+
+.input {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+  font-family: var(--sans); font-size: 15px; color: var(--text);
+  width: 100%;
+}
+.input::placeholder { color: var(--muted); }
+
+.btn {
+  border: none;
+  border-radius: var(--r-pill);
+  padding: 14px 24px;
+  font-family: var(--sans); font-weight: 500; font-size: 15px;
+  cursor: pointer; width: 100%; text-align: center;
+}
+.btn-primary { background: var(--accent); color: #FFFFFF; }
+.btn-secondary { background: transparent; color: var(--muted); }
+.btn-destructive { background: transparent; color: var(--error); }
+
+/* ============ Onboarding ============ */
+.onboarding-body { justify-content: space-between; padding-top: 0; }
+.onboarding-art {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  margin-top: 24px;
+}
+.onboarding-mark {
+  width: 120px; height: 120px;
+  border-radius: 60px;
+  background: var(--accent-tint);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--serif); font-weight: 500; font-size: 64px;
+  color: var(--accent-pressed);
+}
+.onboarding-content h2 {
+  font-family: var(--serif); font-weight: 500;
+  font-size: 30px; letter-spacing: -0.02em;
+  margin: 0 0 12px;
+}
+.onboarding-content p {
+  font-family: var(--serif); font-style: italic;
+  color: var(--muted);
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+}
+.dots { display: flex; gap: 8px; justify-content: center; padding-top: 16px; }
+.dot {
+  width: 8px; height: 8px; border-radius: 999px;
+  background: var(--line-strong);
+}
+.dot.active { background: var(--accent); width: 24px; }
+
+/* ============ Login ============ */
+.login-body { justify-content: center; gap: 24px; padding-top: 0; }
+.login-hero { text-align: center; margin-bottom: 8px; }
+.login-title {
+  font-family: var(--serif); font-weight: 500;
+  font-size: 44px; letter-spacing: -0.02em;
+  margin: 0 0 6px;
+}
+.login-sub {
+  font-family: var(--serif); font-style: italic;
+  color: var(--muted); font-size: 15px;
+  margin: 0;
+}
+
+/* ============ Scan + Result ============ */
+.photo {
+  aspect-ratio: 1;
+  border-radius: var(--r-lg);
+  background: radial-gradient(circle at 50% 45%, #B58A6C 0%, #8E6448 35%, #6F4A33 60%, #4D3220 100%);
+  position: relative; overflow: hidden;
+}
+.photo::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.18), transparent 50%);
+}
+.result-label {
+  font-family: var(--serif); font-style: italic;
+  color: var(--muted); font-size: 14px;
+  margin: 4px 0 -8px;
+}
+.result-headline {
+  font-family: var(--sans); font-weight: 500;
+  font-size: 28px; letter-spacing: -0.01em; line-height: 1.2;
+  margin: 0;
+}
+.result-confidence {
+  font-family: var(--sans);
+  font-feature-settings: "tnum";
+  color: var(--muted); font-size: 14px;
+  margin: 0;
+  display: flex; align-items: center; gap: 8px;
+}
+.confidence-dot {
+  width: 8px; height: 8px; border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-tint);
+}
+.confidence-dot.calm { background: var(--calm); box-shadow: 0 0 0 4px var(--calm-tint); }
+
+/* ============ History ============ */
+.search {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  padding: 10px 14px;
+  font-size: 14px; color: var(--muted);
+  display: flex; align-items: center; gap: 8px;
+}
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip {
+  padding: 6px 12px;
+  border-radius: var(--r-pill);
+  font-size: 13px; font-weight: 500;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+.chip.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #FFFFFF;
+}
+.history-list { gap: 12px; display: flex; flex-direction: column; }
+.history-row {
+  display: grid;
+  grid-template-columns: 48px 1fr auto;
+  gap: 12px; align-items: center;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 12px;
+}
+.thumb {
+  width: 48px; height: 48px; border-radius: 10px;
+  background: radial-gradient(circle at 40% 40%, #B58A6C, #6F4A33);
+}
+.thumb.b { background: radial-gradient(circle at 50% 50%, #C9A488, #7A5A40); }
+.thumb.c { background: radial-gradient(circle at 60% 40%, #A07560, #533728); }
+.row-label { font-weight: 500; font-size: 15px; margin: 0; }
+.row-meta {
+  font-size: 13px; color: var(--muted);
+  font-feature-settings: "tnum"; margin: 0;
+}
+.row-date {
+  font-size: 13px; color: var(--muted);
+  font-feature-settings: "tnum";
+}
+.tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px; font-weight: 500;
+  background: var(--accent-tint);
+  color: var(--accent-pressed);
+  margin-right: 6px;
+}
+.tag.calm { background: var(--calm-tint); color: var(--calm); }
+
+/* ============ Scan Detail ============ */
+.detail-photo {
+  aspect-ratio: 1;
+  border-radius: var(--r-lg);
+  background: radial-gradient(circle at 50% 45%, #B58A6C 0%, #8E6448 35%, #6F4A33 60%, #4D3220 100%);
+}
+.bars { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+.bar-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
+.bar-label { font-size: 13px; }
+.bar-pct { font-size: 12px; color: var(--muted); font-feature-settings: "tnum"; }
+.bar-track {
+  grid-column: 1 / -1;
+  height: 6px; border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+}
+.bar-fill.calm { background: var(--calm); }
+.kv {
+  display: grid; grid-template-columns: 1fr auto;
+  gap: 8px; align-items: center;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+  font-size: 14px;
+}
+.kv-key { color: var(--muted); }
+.kv-val { font-feature-settings: "tnum"; }
+
+/* ============ Disclaimer / About modal ============ */
+.modal-veil {
+  position: absolute; inset: 0;
+  background: rgba(25,25,25,0.4);
+}
+.sheet {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  background: var(--bg);
+  border-top-left-radius: 24px;
+  border-top-right-radius: 24px;
+  padding: 14px 24px 28px;
+  max-height: 85%;
+  display: flex; flex-direction: column; gap: 14px;
+  overflow: auto;
+}
+.sheet-handle {
+  width: 36px; height: 4px;
+  border-radius: 999px;
+  background: var(--line-strong);
+  margin: 0 auto 12px;
+}
+.sheet h2 {
+  font-family: var(--serif); font-weight: 500;
+  font-size: 26px; letter-spacing: -0.01em;
+  margin: 0;
+}
+.sheet p {
+  font-family: var(--serif);
+  font-size: 15px; line-height: 1.6;
+  color: var(--text); margin: 0;
+}
+.sheet p.muted { color: var(--muted); font-style: italic; }
+.sheet-head { display: flex; align-items: center; justify-content: space-between; }
+.sheet-close { color: var(--muted); font-size: 22px; line-height: 1; cursor: pointer; padding-left: 12px; }
+.severity-tag {
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  font-family: var(--sans);
+  font-size: 12px; font-weight: 500;
+  display: inline-block; align-self: flex-start;
+  margin: -4px 0 4px;
+}
+.severity-tag.urgent { background: var(--accent-tint); color: var(--accent-pressed); }
+.severity-tag.calm { background: var(--calm-tint); color: var(--calm); }
+.action-list {
+  font-family: var(--serif);
+  font-size: 14.5px; line-height: 1.65;
+  margin: 0; padding-left: 18px;
+}
+.action-list li { margin-bottom: 4px; }
+.muted-italic {
+  font-family: var(--serif); font-style: italic;
+  color: var(--muted); margin: 0; font-size: 14px;
+}
+
+/* ============ Settings ============ */
+.section-cap {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 8px 0 4px;
+}
+.list {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+.list-row {
+  padding: 14px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 15px;
+  border-bottom: 1px solid var(--line);
+}
+.list-row:last-child { border-bottom: none; }
+.list-row .val { color: var(--muted); font-size: 14px; font-feature-settings: "tnum"; }
+.list-row .chev::after { content: "›"; color: var(--muted); margin-left: 8px; }
+
+.toggle {
+  width: 40px; height: 24px; border-radius: 999px;
+  background: var(--line-strong);
+  position: relative; flex-shrink: 0;
+}
+.toggle::after {
+  content: ""; position: absolute;
+  top: 2px; left: 2px;
+  width: 20px; height: 20px;
+  border-radius: 999px; background: #fff;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.18);
+}
+.toggle.on { background: var(--accent); }
+.toggle.on::after { left: 18px; }
+
+.version-foot {
+  text-align: center;
+  font-family: var(--serif); font-style: italic;
+  color: var(--muted); font-size: 13px;
+  margin-top: 8px;
+}
+
+/* ============ Profile ============ */
+.profile-hero {
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  padding: 16px 0 8px;
+}
+.avatar {
+  width: 88px; height: 88px;
+  border-radius: 999px;
+  background: var(--accent-tint);
+  color: var(--accent-pressed);
+  font-family: var(--serif); font-weight: 500; font-size: 44px;
+  display: flex; align-items: center; justify-content: center;
+}
+.profile-email { font-size: 15px; margin: 0; }
+.profile-meta { font-family: var(--serif); font-style: italic; color: var(--muted); font-size: 14px; margin: 0; }
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+.stat-card {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 14px 8px;
+  text-align: center;
+}
+.stat-num {
+  font-family: var(--sans); font-weight: 500;
+  font-size: 22px; font-feature-settings: "tnum";
+  margin: 0;
+}
+.stat-cap {
+  font-size: 11px; color: var(--muted);
+  letter-spacing: 0.06em; text-transform: uppercase;
+  margin: 4px 0 0;
+}
+
+/* ============ About ============ */
+.about-body { gap: 20px; }
+.about-mark {
+  text-align: center;
+  font-family: var(--serif); font-weight: 500;
+  font-size: 40px; letter-spacing: -0.02em;
+  margin: 8px 0 0;
+}
+.about-tag {
+  text-align: center;
+  font-family: var(--serif); font-style: italic;
+  color: var(--muted); font-size: 14px; margin: 0;
+}
+.about-para {
+  font-family: var(--serif); font-size: 15px; line-height: 1.65;
+  margin: 0;
+}
+
+/* ============ Disclaimer footer (in-screen) ============ */
+.disclaimer {
+  font-family: var(--serif); font-style: italic;
+  font-size: 12px; color: var(--muted);
+  text-align: center; margin: 0;
+  padding: 12px 24px 24px; line-height: 1.5;
+}
+
+/* ============ Reference sections ============ */
+.specimens {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+}
+@media (max-width: 700px) { .specimens { grid-template-columns: 1fr; } }
+.specimen {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 32px;
+}
+.specimen-tag {
+  font-size: 12px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--muted);
+  margin-bottom: 12px;
+}
+.specimen-name { font-size: 20px; margin: 0 0 16px; font-weight: 500; }
+.specimen-sample-serif {
+  font-family: var(--serif); font-size: 36px; font-weight: 500;
+  letter-spacing: -0.02em; line-height: 1.15;
+  margin: 0 0 12px;
+}
+.specimen-sample-italic {
+  font-family: var(--serif); font-style: italic;
+  color: var(--muted); margin: 0 0 16px;
+}
+.specimen-sample-sans { font-family: var(--sans); font-size: 18px; margin: 0 0 8px; }
+.specimen-sample-small {
+  font-family: var(--sans); font-size: 14px; color: var(--muted);
+  margin: 0; font-feature-settings: "tnum";
+}
+
+.palette {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 16px;
+}
+.swatch {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+.swatch-color { height: 88px; border-bottom: 1px solid var(--line); }
+.swatch-meta { padding: 12px 14px; }
+.swatch-name { font-size: 14px; font-weight: 500; margin: 0 0 2px; }
+.swatch-hex { font-size: 12px; color: var(--muted); font-feature-settings: "tnum"; margin: 0; }
+
+.scale { display: flex; align-items: end; gap: 24px; flex-wrap: wrap; }
+.tick { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.tick-bar { width: 40px; background: var(--accent); border-radius: 4px; }
+.tick-num { font-size: 12px; color: var(--muted); font-feature-settings: "tnum"; }
+
+.components-row {
+  display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="header">
+    <h1>CLEAR — design system</h1>
+    <p>Mobile-first design system for the skin-lesion identification app. Warm, restrained, considered — like Claude on mobile. Nine screens across three flows: core capture loop, results &amp; detail, account.</p>
+  </header>
+
+  <!-- ============ Section 1: Core flow ============ -->
+  <div class="section-title">Core flow</div>
+  <div class="phones">
+
+    <!-- Onboarding step 2 -->
+    <div>
+      <div class="phone">
+        <div class="screen">
+          <div class="notch"></div>
+          <div class="body onboarding-body">
+            <div class="onboarding-art">
+              <div class="onboarding-mark">!</div>
+            </div>
+            <div class="onboarding-content">
+              <h2>Not a medical device.</h2>
+              <p>CLEAR is an experimental classification tool. It cannot diagnose disease and is not a substitute for a dermatologist. Always consult a medical professional for medical advice.</p>
+            </div>
+            <div class="dots">
+              <span class="dot"></span>
+              <span class="dot active"></span>
+              <span class="dot"></span>
+            </div>
+            <button class="btn btn-primary">Continue</button>
+            <button class="btn btn-secondary">Back</button>
+          </div>
+        </div>
+      </div>
+      <div class="screen-label">Onboarding · 2 of 3</div>
+    </div>
+
+    <!-- Login -->
+    <div>
+      <div class="phone">
+        <div class="screen">
+          <div class="notch"></div>
+          <div class="body login-body">
+            <div class="login-hero">
+              <h2 class="login-title">CLEAR</h2>
+              <p class="login-sub">skin lesion identification</p>
+            </div>
+            <input class="input" placeholder="Email" />
+            <input class="input" type="password" placeholder="Password" />
+            <button class="btn btn-primary">Sign in</button>
+            <button class="btn btn-secondary">Create account</button>
+          </div>
+        </div>
+      </div>
+      <div class="screen-label">Login</div>
+    </div>
+
+    <!-- Scan + Result -->
+    <div>
+      <div class="phone">
+        <div class="screen">
+          <div class="notch"></div>
+          <div class="app-bar">
+            <span class="wordmark">CLEAR</span>
+            <a class="bar-link" href="#">History</a>
+          </div>
+          <div class="body">
+            <div class="photo"></div>
+            <p class="result-label">Result</p>
+            <h3 class="result-headline">Needs a closer look</h3>
+            <p class="result-confidence">
+              <span class="confidence-dot"></span>
+              Confidence&nbsp;0.74
+            </p>
+            <button class="btn btn-primary" style="margin-top:8px">Save to history</button>
+            <button class="btn btn-secondary">Take another photo</button>
+          </div>
+        </div>
+      </div>
+      <div class="screen-label">Scan + Result</div>
+    </div>
+
+  </div>
+
+  <!-- ============ Section 2: Results & detail ============ -->
+  <div class="section-title">Results &amp; detail</div>
+  <div class="phones">
+
+    <!-- Scan Detail -->
+    <div>
+      <div class="phone">
+        <div class="screen">
+          <div class="notch"></div>
+          <div class="app-bar">
+            <span class="bar-back">← Back</span>
+            <a class="bar-link" href="#">Share</a>
+          </div>
+          <div class="body">
+            <div class="detail-photo"></div>
+            <p class="result-label">Result</p>
+            <h3 class="result-headline">Needs a closer look</h3>
+            <p class="result-confidence">
+              <span class="confidence-dot"></span>
+              Confidence&nbsp;0.74
+            </p>
+
+            <p class="section-cap" style="margin-top:8px">Top predictions</p>
+            <div class="bars">
+              <div class="bar-row"><span class="bar-label">Melanoma</span><span class="bar-pct">41%</span><div class="bar-track"><div class="bar-fill" style="width:41%"></div></div></div>
+              <div class="bar-row"><span class="bar-label">Nevus</span><span class="bar-pct">33%</span><div class="bar-track"><div class="bar-fill calm" style="width:33%"></div></div></div>
+              <div class="bar-row"><span class="bar-label">Benign keratosis</span><span class="bar-pct">18%</span><div class="bar-track"><div class="bar-fill calm" style="width:18%"></div></div></div>
+              <div class="bar-row"><span class="bar-label">Other</span><span class="bar-pct">8%</span><div class="bar-track"><div class="bar-fill calm" style="width:8%"></div></div></div>
+            </div>
+
+            <div style="margin-top:8px">
+              <div class="kv"><span class="kv-key">Date</span><span class="kv-val">May 7, 2026 · 10:42</span></div>
+              <div class="kv"><span class="kv-key">Model</span><span class="kv-val">v1.0-binary</span></div>
+            </div>
+
+            <button class="btn btn-destructive" style="margin-top:4px">Delete scan</button>
+          </div>
+        </div>
+      </div>
+      <div class="screen-label">Scan detail</div>
+    </div>
+
+    <!-- History with filters -->
+    <div>
+      <div class="phone">
+        <div class="screen">
+          <div class="notch"></div>
+          <div class="app-bar">
+            <span class="wordmark">CLEAR</span>
+            <a class="bar-link" href="#">+ Scan</a>
+          </div>
+          <div class="body">
+            <p class="result-label" style="margin-bottom:0">History</p>
+            <div class="search">⌕&nbsp;&nbsp;Search scans…</div>
+            <div class="chips">
+              <span class="chip active">All</span>
+              <span class="chip">Closer look</span>
+              <span class="chip">Low concern</span>
+            </div>
+            <div class="history-list">
+              <div class="history-row">
+                <div class="thumb"></div>
+                <div>
+                  <p class="row-label"><span class="tag">Closer look</span></p>
+                  <p class="row-meta">0.74 confidence</p>
+                </div>
+                <span class="row-date">May 7</span>
+              </div>
+              <div class="history-row">
+                <div class="thumb b"></div>
+                <div>
+                  <p class="row-label"><span class="tag calm">Low concern</span></p>
+                  <p class="row-meta">0.91 confidence</p>
+                </div>
+                <span class="row-date">May 4</span>
+              </div>
+              <div class="history-row">
+                <div class="thumb c"></div>
+                <div>
+                  <p class="row-label"><span class="tag calm">Low concern</span></p>
+                  <p class="row-meta">0.83 confidence</p>
+                </div>
+                <span class="row-date">Apr 29</span>
+              </div>
+              <div class="history-row">
+                <div class="thumb"></div>
+                <div>
+                  <p class="row-label"><span class="tag">Closer look</span></p>
+                  <p class="row-meta">0.68 confidence</p>
+                </div>
+                <span class="row-date">Apr 21</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="screen-label">History · with filters</div>
+    </div>
+
+    <!-- Condition info sheet -->
+    <div>
+      <div class="phone">
+        <div class="screen">
+          <div class="notch"></div>
+          <div class="app-bar" style="opacity:0.35">
+            <span class="bar-back">← Back</span>
+            <a class="bar-link" href="#">Share</a>
+          </div>
+          <div class="body" style="opacity:0.35; gap: 12px;">
+            <div class="detail-photo" style="aspect-ratio: 1.3"></div>
+            <p class="result-label">Result</p>
+            <h3 class="result-headline">Needs a closer look</h3>
+            <p class="section-cap" style="margin-top:4px">Top predictions</p>
+            <div class="bars">
+              <div class="bar-row"><span class="bar-label">Melanoma</span><span class="bar-pct">41%</span><div class="bar-track"><div class="bar-fill" style="width:41%"></div></div></div>
+              <div class="bar-row"><span class="bar-label">Nevus</span><span class="bar-pct">33%</span><div class="bar-track"><div class="bar-fill calm" style="width:33%"></div></div></div>
+            </div>
+          </div>
+          <div class="modal-veil"></div>
+          <div class="sheet">
+            <div class="sheet-handle"></div>
+            <div class="sheet-head">
+              <h2>Melanoma</h2>
+              <span class="sheet-close">×</span>
+            </div>
+            <p class="muted">Malignant skin cancer</p>
+            <span class="severity-tag urgent">See a doctor soon</span>
+
+            <p class="section-cap" style="margin-top:8px">What it is</p>
+            <p>A serious form of skin cancer that develops in pigment-producing cells. Often appears as a new dark spot or a mole that changes in shape, color, or size.</p>
+
+            <p class="section-cap">What you should do</p>
+            <ul class="action-list">
+              <li>See a dermatologist within the next few weeks</li>
+              <li>Bring this scan and any earlier photos with you</li>
+              <li>Don't wait for it to change &mdash; early detection matters most</li>
+            </ul>
+
+            <p class="section-cap">Time to resolve on its own</p>
+            <p class="muted-italic">Does not resolve on its own.</p>
+
+            <button class="btn btn-secondary" style="margin-top:8px">Learn more</button>
+          </div>
+        </div>
+      </div>
+      <div class="screen-label">Condition info · tapped</div>
+    </div>
+
+  </div>
+
+  <!-- ============ Section 3: Account ============ -->
+  <div class="section-title">Account</div>
+  <div class="phones">
+
+    <!-- Settings -->
+    <div>
+      <div class="phone">
+        <div class="screen">
+          <div class="notch"></div>
+          <div class="app-bar">
+            <span class="bar-back">← Back</span>
+            <span></span>
+          </div>
+          <div class="body">
+            <p class="result-label">Settings</p>
+
+            <p class="section-cap">Account</p>
+            <div class="list">
+              <div class="list-row"><span>Email</span><span class="val">dat@example.com</span></div>
+              <div class="list-row"><span>Change password</span><span class="chev"></span></div>
+            </div>
+
+            <p class="section-cap">Notifications</p>
+            <div class="list">
+              <div class="list-row"><span>Scan reminders</span><span class="toggle on"></span></div>
+              <div class="list-row"><span>Product updates</span><span class="toggle"></span></div>
+            </div>
+
+            <p class="section-cap">About</p>
+            <div class="list">
+              <div class="list-row"><span>Model version</span><span class="val">v1.0-binary</span></div>
+              <div class="list-row"><span>View disclaimer</span><span class="chev"></span></div>
+              <div class="list-row"><span>Privacy policy</span><span class="chev"></span></div>
+            </div>
+
+            <button class="btn btn-destructive" style="margin-top:8px">Sign out</button>
+            <p class="version-foot">CLEAR v0.1.0</p>
+          </div>
+        </div>
+      </div>
+      <div class="screen-label">Settings</div>
+    </div>
+
+    <!-- Profile -->
+    <div>
+      <div class="phone">
+        <div class="screen">
+          <div class="notch"></div>
+          <div class="app-bar">
+            <span class="bar-back">← Back</span>
+            <a class="bar-link" href="#">Edit</a>
+          </div>
+          <div class="body">
+            <div class="profile-hero">
+              <div class="avatar">D</div>
+              <p class="profile-email">dat@example.com</p>
+              <p class="profile-meta">Joined April 2026</p>
+            </div>
+
+            <div class="stats-grid">
+              <div class="stat-card"><p class="stat-num">12</p><p class="stat-cap">Scans</p></div>
+              <div class="stat-card"><p class="stat-num">3</p><p class="stat-cap">Closer look</p></div>
+              <div class="stat-card"><p class="stat-num">9</p><p class="stat-cap">Low concern</p></div>
+            </div>
+
+            <p class="section-cap" style="margin-top:8px">Activity</p>
+            <div class="list">
+              <div class="list-row"><span>Most recent scan</span><span class="val">May 7</span></div>
+              <div class="list-row"><span>First scan</span><span class="val">Apr 12</span></div>
+            </div>
+
+            <button class="btn btn-secondary" style="margin-top:8px">Export my data</button>
+          </div>
+        </div>
+      </div>
+      <div class="screen-label">Profile</div>
+    </div>
+
+    <!-- About -->
+    <div>
+      <div class="phone">
+        <div class="screen">
+          <div class="notch"></div>
+          <div class="app-bar">
+            <span class="bar-back">← Back</span>
+            <span></span>
+          </div>
+          <div class="body about-body">
+            <h2 class="about-mark">CLEAR</h2>
+            <p class="about-tag">skin-lesion identification</p>
+
+            <p class="about-para">CLEAR classifies skin-lesion photos into broad categories using a small neural network. It runs on your phone, sends each scan to a private backend for prediction, and stores your scan history securely.</p>
+
+            <p class="about-para">It does not diagnose disease. It cannot replace a dermatologist. Predictions are probabilistic and routinely wrong on edge cases.</p>
+
+            <p class="section-cap" style="margin-top:8px">System</p>
+            <div class="list">
+              <div class="list-row"><span>Model</span><span class="val">ResNet18</span></div>
+              <div class="list-row"><span>Trained on</span><span class="val">HAM10000</span></div>
+              <div class="list-row"><span>Classes</span><span class="val">2 (binary)</span></div>
+              <div class="list-row"><span>App version</span><span class="val">0.1.0</span></div>
+            </div>
+
+            <button class="btn btn-secondary" style="margin-top:8px">View source</button>
+          </div>
+        </div>
+      </div>
+      <div class="screen-label">About</div>
+    </div>
+
+  </div>
+
+  <!-- ============ Reference ============ -->
+  <div class="section-title">Typography</div>
+  <div class="specimens">
+    <div class="specimen">
+      <div class="specimen-tag">Display · serif</div>
+      <h3 class="specimen-name">Source Serif 4</h3>
+      <p class="specimen-sample-serif">Needs a closer look.</p>
+      <p class="specimen-sample-italic">Used sparingly: result label, screen titles, the disclaimer. The voice of the app.</p>
+    </div>
+    <div class="specimen">
+      <div class="specimen-tag">Body · sans</div>
+      <h3 class="specimen-name" style="font-family:var(--sans)">Geist</h3>
+      <p class="specimen-sample-sans">Confidence 0.74 · Save to history · Take another photo</p>
+      <p class="specimen-sample-small">Tabular numerals 0123456789 · Used for everything else.</p>
+    </div>
+  </div>
+
+  <div class="section-title">Color</div>
+  <div class="palette">
+    <div class="swatch"><div class="swatch-color" style="background:#F0EEE6"></div><div class="swatch-meta"><p class="swatch-name">Background</p><p class="swatch-hex">#F0EEE6</p></div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#FAF9F5"></div><div class="swatch-meta"><p class="swatch-name">Surface</p><p class="swatch-hex">#FAF9F5</p></div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#191919"></div><div class="swatch-meta"><p class="swatch-name">Text</p><p class="swatch-hex">#191919</p></div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#6B6B6B"></div><div class="swatch-meta"><p class="swatch-name">Muted</p><p class="swatch-hex">#6B6B6B</p></div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#D97757"></div><div class="swatch-meta"><p class="swatch-name">Accent</p><p class="swatch-hex">#D97757</p></div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#3D5A48"></div><div class="swatch-meta"><p class="swatch-name">Calm</p><p class="swatch-hex">#3D5A48</p></div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#A03E3E"></div><div class="swatch-meta"><p class="swatch-name">Error</p><p class="swatch-hex">#A03E3E</p></div></div>
+  </div>
+
+  <div class="section-title">Spacing scale</div>
+  <div class="scale">
+    <div class="tick"><div class="tick-bar" style="height:4px"></div><span class="tick-num">4</span></div>
+    <div class="tick"><div class="tick-bar" style="height:8px"></div><span class="tick-num">8</span></div>
+    <div class="tick"><div class="tick-bar" style="height:16px"></div><span class="tick-num">16</span></div>
+    <div class="tick"><div class="tick-bar" style="height:24px"></div><span class="tick-num">24</span></div>
+    <div class="tick"><div class="tick-bar" style="height:32px"></div><span class="tick-num">32</span></div>
+    <div class="tick"><div class="tick-bar" style="height:48px"></div><span class="tick-num">48</span></div>
+    <div class="tick"><div class="tick-bar" style="height:64px"></div><span class="tick-num">64</span></div>
+  </div>
+
+  <div class="section-title">Components</div>
+  <div class="components-row">
+    <button class="btn btn-primary" style="width:auto; padding-left:24px; padding-right:24px;">Save to history</button>
+    <button class="btn btn-secondary" style="width:auto;">Take another photo</button>
+    <button class="btn btn-destructive" style="width:auto;">Delete scan</button>
+  </div>
+  <div class="components-row" style="margin-top:16px">
+    <span class="chip active">All</span>
+    <span class="chip">Closer look</span>
+    <span class="chip">Low concern</span>
+    <span class="tag">Closer look</span>
+    <span class="tag calm">Low concern</span>
+    <span class="toggle on"></span>
+    <span class="toggle"></span>
+  </div>
+
+</div>
+</body>
+</html>
