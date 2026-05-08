@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings
+from hosted_database import create_client, Client
 
 
 class Settings(BaseSettings):
@@ -11,3 +12,4 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+hosted_database: Client = create_client(settings.hosted_database_url, settings.hosted_database_key)
