@@ -20,17 +20,27 @@ ml/data/
 
 All datasets must be translated to this canonical label set before training. The model only ever sees these strings.
 
-| canonical label       | short code | description                                  |
-|-----------------------|------------|----------------------------------------------|
-| `melanoma`            | `mel`      | malignant melanoma                           |
-| `nevus`               | `nv`       | melanocytic nevus (common mole)              |
-| `basal_cell_carcinoma`| `bcc`      | basal cell carcinoma                         |
-| `squamous_cell_carcinoma` | `scc`  | squamous cell carcinoma                      |
-| `actinic_keratosis`   | `akiec`    | actinic keratosis / intraepithelial carcinoma|
-| `benign_keratosis`    | `bkl`      | benign keratosis-like lesions                |
-| `dermatofibroma`      | `df`       | dermatofibroma                               |
-| `vascular_lesion`     | `vasc`     | vascular lesions (angiomas, hemorrhage)      |
-| `seborrheic_keratosis`| `sk`       | seborrheic keratosis                         |
+**Current canonical labels (HAM10000-supported, Phases 1–2):**
+
+| canonical label         | short code | description                                   |
+|-------------------------|------------|-----------------------------------------------|
+| `melanoma`              | `mel`      | malignant melanoma                            |
+| `nevus`                 | `nv`       | melanocytic nevus (common mole)               |
+| `basal_cell_carcinoma`  | `bcc`      | basal cell carcinoma                          |
+| `actinic_keratosis`     | `akiec`    | actinic keratosis / intraepithelial carcinoma |
+| `benign_keratosis`      | `bkl`      | benign keratosis-like lesions                 |
+| `dermatofibroma`        | `df`       | dermatofibroma                                |
+| `vascular_lesion`       | `vasc`     | vascular lesions (angiomas, hemorrhage)       |
+
+**Future canonical labels (added in Phase 3 when multi-dataset training begins):**
+
+| canonical label           | short code | available in         |
+|---------------------------|------------|----------------------|
+| `squamous_cell_carcinoma` | `scc`      | ISIC Archive         |
+| `seborrheic_keratosis`    | `sk`       | ISIC Archive         |
+
+> HAM10000 folds SCC cases into `actinic_keratosis` and has no separate `seborrheic_keratosis` class.
+> These two labels must not appear in training data until a dataset that supports them is added.
 
 Use `snake_case` canonical names in code and DB rows. Use the short code only when matching dataset filenames.
 
@@ -71,9 +81,9 @@ ISIC uses lowercase free-text diagnoses; normalize whitespace and case before ma
 2. **One canonical name per concept.** Don't introduce synonyms (`mole` and `nevus`, etc.).
 3. **Snake_case only** in code, DB, and API responses. Display strings (e.g. "Basal Cell Carcinoma") are a UI concern and live in the mobile app.
 4. **Class imbalance is real.** HAM10000 is ~67% nevus. Document any reweighting / sampling strategy in `docs/decisions.md`.
-5. **Binary fallback.** For the Phase-1 binary baseline, group as:
-   - `suspicious` = `melanoma`, `basal_cell_carcinoma`, `squamous_cell_carcinoma`, `actinic_keratosis`
-   - `non_suspicious` = everything else
+5. **Binary fallback.** For the Phase-1 binary baseline, group the 7 HAM10000 labels as:
+   - `suspicious` = `melanoma`, `basal_cell_carcinoma`, `actinic_keratosis`
+   - `non_suspicious` = `nevus`, `benign_keratosis`, `dermatofibroma`, `vascular_lesion`
 
 ## Adding a new dataset
 1. Drop raw files in `raw/<dataset-name>/`.
