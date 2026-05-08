@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Skin Lesion",
-    "slug": "skin-lesion",
+    "name": "CLEAR",
+    "slug": "clear",
     "version": "0.1.0",
     "orientation": "portrait",
     "ios": { "supportsTablet": true },
