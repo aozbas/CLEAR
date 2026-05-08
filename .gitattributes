@@ -1,0 +1,34 @@
+# Normalize line endings: LF in repo, native on checkout.
+# Keeps diffs clean across Windows + macOS contributors.
+* text=auto eol=lf
+
+# Source code — explicit text, in case auto-detect ever misfires.
+*.py     text eol=lf
+*.ts     text eol=lf
+*.tsx    text eol=lf
+*.js     text eol=lf
+*.json   text eol=lf
+*.md     text eol=lf
+*.sql    text eol=lf
+*.toml   text eol=lf
+*.yml    text eol=lf
+*.yaml   text eol=lf
+
+# Shell scripts: always LF (would break on macOS/Linux otherwise).
+*.sh     text eol=lf
+
+# PowerShell: CRLF is the Windows convention.
+*.ps1    text eol=crlf
+
+# Binary files — never touch line endings.
+*.pt     binary
+*.pth    binary
+*.onnx   binary
+*.jpg    binary
+*.jpeg   binary
+*.png    binary
+*.gif    binary
+*.ico    binary
+*.pdf    binary
+*.zip    binary
+*.gz     binary
