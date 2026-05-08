@@ -1,9 +1,34 @@
+# ── Python ───────────────────────────────────────────────
 __pycache__/
 *.pyc
+*.pyo
 .venv/
-node_modules/
-.expo/
+
+# ── ML data & checkpoints ────────────────────────────────
+# Raw and processed images stay local — too large for git.
+# Splits (train/val/test CSVs) ARE committed; they're small
+# and define the dataset split for reproducibility.
+ml/data/raw/
+ml/data/processed/
+ml/models/*.pt
+
+# ── Environment / secrets ────────────────────────────────
 .env
 .env.*
 !.env.example
-ml/models/*.pt
+
+# ── Mobile ───────────────────────────────────────────────
+node_modules/
+.expo/
+
+# ── OS artifacts ─────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── IDE artifacts ────────────────────────────────────────
+.idea/
+.vscode/
+
+# ── Logs ─────────────────────────────────────────────────
+*.log
