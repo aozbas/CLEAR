@@ -29,6 +29,10 @@ desktop.ini
 # ── IDE artifacts ────────────────────────────────────────
 .idea/
 .vscode/
+!.vscode/settings.json
+
+# ── MCP config (contains project ref) ───────────────────
+.mcp.json
 
 # ── Supabase ─────────────────────────────────────────────
 supabase/.temp/
