@@ -19,12 +19,20 @@ export default function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
     supabase.auth.getSession().then(({ data }) => {
+      if (!isMounted) return;
       setSession(data.session);
       setLoading(false);
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => setSession(s));
-    return () => sub.subscription.unsubscribe();
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
+      if (!isMounted) return;
+      setSession(s);
+    });
+    return () => {
+      isMounted = false;
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   if (loading) {
