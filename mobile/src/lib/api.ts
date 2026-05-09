@@ -8,6 +8,14 @@ async function authHeader(): Promise<Record<string, string>> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+async function parseOrThrow(r: Response) {
+  if (!r.ok) {
+    const body = await r.text().catch(() => "");
+    throw new Error(`HTTP ${r.status} ${r.statusText}${body ? `: ${body}` : ""}`);
+  }
+  return r.json();
+}
+
 export async function predict(imageUri: string) {
   const form = new FormData();
   // @ts-expect-error RN FormData file shape
@@ -17,10 +25,10 @@ export async function predict(imageUri: string) {
     body: form,
     headers: await authHeader(),
   });
-  return r.json();
+  return parseOrThrow(r);
 }
 
 export async function listScans() {
   const r = await fetch(`${BASE}/scans`, { headers: await authHeader() });
-  return r.json();
+  return parseOrThrow(r);
 }
