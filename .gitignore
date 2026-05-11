@@ -29,6 +29,7 @@ desktop.ini
 # ── IDE artifacts ────────────────────────────────────────
 .idea/
 .vscode/
+!.vscode/
 !.vscode/settings.json
 
 # ── MCP config (contains project ref) ───────────────────
