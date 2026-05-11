@@ -129,5 +129,5 @@ For visual exploration of the above (class distribution, lesion structure, image
 ## Adding a new dataset
 1. Drop raw files in `raw/<dataset-name>/`.
 2. Add a translation table in this README under "Dataset → canonical translation".
-3. Write a script in `ml/training/` that emits `splits/<dataset-name>.csv` with columns: `image_path,label` (label = canonical).
+3. Write a script in `ml/training/` that emits `splits/<dataset-name>.csv` with columns: `split,image_path,label` (label = canonical).
 4. Note the choice (and any excluded classes) in [../../docs/decisions.md](../../docs/decisions.md).
