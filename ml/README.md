@@ -13,3 +13,13 @@ See [docs/phases.md](../docs/phases.md) for the full build plan.
 - `models/` — model architectures + checkpoints
 - `training/` — train/eval scripts
 - `inference/` — load + predict helpers used by backend
+
+## Model artifacts
+
+Checkpoint files such as `ml/models/lesion_classifier_binary.pt` are local artifacts and are intentionally not committed. The public repo should show the training code, inference code, dataset split, and recorded metrics without distributing model weights by default.
+
+For a demo on another machine, either copy the checkpoint out-of-band or retrain it with:
+
+```bash
+python -m ml.training.train
+```

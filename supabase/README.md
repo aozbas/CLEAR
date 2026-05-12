@@ -10,7 +10,10 @@ supabase/
 ├── migrations/          # timestamped SQL migration files
 │   ├── 0001_init.sql
 │   ├── 0002_profile_trigger_and_constraints.sql
-│   └── 0003_lock_handle_new_user.sql
+│   ├── 0003_lock_handle_new_user.sql
+│   ├── 0004_grant_backend_table_privileges.sql
+│   ├── 0005_lock_rls_auto_enable.sql
+│   └── 0006_optimize_auth_rls_policies.sql
 └── seed.sql             # local-dev seed data
 ```
 
