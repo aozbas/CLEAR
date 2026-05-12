@@ -147,11 +147,11 @@ Base unit **4px**. Scale: `4 · 8 · 16 · 24 · 32 · 48 · 64`. Density target
 
 ---
 
-## Screens (9 total)
+## Screens
 
-Listed in user-flow order. Each maps to one React Native component under `mobile/src/screens/`.
+Phase 1 currently implements `LoginScreen`, `ScanScreen`, and `HistoryScreen`. The remaining screens below are the target product direction and should be added only when their phase calls for them.
 
-### 1. Onboarding (`OnboardingScreen.tsx`)
+### 1. Onboarding (`OnboardingScreen.tsx`) — deferred
 First-launch only, three steps. Step 2 is the **only** place the full disclaimer is presented to the user with prominence.
 - Top: progress dots (3 dots, active = accent, wide pill).
 - Center: optional accent-tinted illustration mark (120×120 circle).
@@ -161,17 +161,17 @@ First-launch only, three steps. Step 2 is the **only** place the full disclaimer
 ### 2. Login (`LoginScreen.tsx`)
 - Center column: serif "CLEAR" wordmark, serif-italic "skin lesion identification" sub.
 - Email + password inputs, primary "Sign in", secondary "Create account".
-- **No disclaimer footer.** It was already shown in Onboarding.
+- **No disclaimer footer.** Full disclaimer/onboarding is deferred to Phase 4 UX polish.
 
 ### 3. Scan + Result (`ScanScreen.tsx`)
 The core loop. Two states: pre-scan (camera/picker) and post-scan (result, shown here).
 - Top app bar: serif wordmark left, "History" link right.
 - Square captured photo with `r-lg` corners.
 - Below: `Result` (serif italic muted), then the headline (sans, `headline`), then `Confidence 0.74` with the confidence dot.
-- Primary "Save to history" + secondary "Take another photo".
+- Phase 1 auto-saves successful predictions. Primary action is "Take photo"; secondary action is "Choose from library"; result state shows "Saved to history".
 - **No disclaimer footer.**
 
-### 4. Scan Detail (`ScanDetailScreen.tsx`)
+### 4. Scan Detail (`ScanDetailScreen.tsx`) — deferred
 Opened by tapping a History row.
 - Top app bar: "← Back" left, "Share" right.
 - Larger photo, then result block (same as Scan).
@@ -185,7 +185,7 @@ Opened by tapping a History row.
 - Filter chips: All (active by default), Closer look, Low concern.
 - List of history rows: thumbnail (40×40 `r-sm`), tag + confidence stack, date right-aligned.
 
-### 6. Condition Info (sheet, not its own screen)
+### 6. Condition Info (sheet, not its own screen) — deferred
 Triggered by tapping a row in the Scan Detail bar list. Bottom sheet over Detail.
 - Sheet handle, condition title (serif), close ×.
 - Subtitle muted (e.g. "Malignant skin cancer").
@@ -195,7 +195,7 @@ Triggered by tapping a row in the Scan Detail bar list. Bottom sheet over Detail
 
 **Content per condition:** maintain a static map in `mobile/src/lib/conditions.ts`. Each entry has `{ name, subtitle, severity, whatItIs, whatToDo[], timeToResolve, learnMoreUrl }`. Treat this as content, not config — review with someone who has clinical context before any change.
 
-### 7. Settings (`SettingsScreen.tsx`)
+### 7. Settings (`SettingsScreen.tsx`) — deferred
 Three sections: Account, Notifications, About. Each is a `list` container with rows.
 - Account: Email (read-only value), Change password (chevron).
 - Notifications: Scan reminders (toggle), Product updates (toggle).
@@ -203,14 +203,14 @@ Three sections: Account, Notifications, About. Each is a `list` container with r
 - Destructive "Sign out" at bottom.
 - Serif-italic version footer: `CLEAR v0.1.0` (no "learning project" framing).
 
-### 8. Profile (`ProfileScreen.tsx`)
+### 8. Profile (`ProfileScreen.tsx`) — deferred
 - Top app bar: "← Back" left, "Edit" link right.
 - Hero: 88×88 avatar circle, email, serif-italic "Joined April 2026".
 - 3-stat grid: Scans, Closer look, Low concern.
 - Activity: list rows for "Most recent scan" and "First scan".
 - Secondary "Export my data".
 
-### 9. About (`AboutScreen.tsx`)
+### 9. About (`AboutScreen.tsx`) — deferred
 - Top app bar: "← Back".
 - Center: serif `CLEAR` wordmark (large), serif-italic tagline.
 - Long-form body in serif: what CLEAR does, what it isn't.
@@ -222,7 +222,9 @@ Three sections: Account, Notifications, About. Each is a `list` container with r
 ## Patterns and house rules
 
 ### Disclaimer policy
-Per product decision: **the full disclaimer appears only once, during Onboarding step 2.** It is not repeated in screen footers. It remains accessible at any time via Settings → "View disclaimer" (which opens the disclaimer sheet — same bottom-sheet pattern as Condition Info).
+Target product decision: **the full disclaimer appears only once, during Onboarding step 2.** It is not repeated in screen footers. It remains accessible at any time via Settings → "View disclaimer" (which opens the disclaimer sheet — same bottom-sheet pattern as Condition Info).
+
+Implementation status: this flow is not in Phase 1. It is deferred to Phase 4 UX polish; until then, app copy must stay conservative and avoid medical certainty.
 
 This is intentional. Plastering disclaimers on every screen looks medical and untrustworthy; showing it once with weight and making it always-reachable is more honest.
 
@@ -314,7 +316,7 @@ Every screen body sits inside a `<ScrollView>`. The mockup demonstrates the visu
 |------|----------|-----------|
 | 2026-05-08 | Initial system created | Designed against the "modern health tech that isn't cold" direction. Reference: Claude mobile app. Drove research through One Medical and Levels Health. |
 | 2026-05-08 | Accent is `#D97757` (Anthropic burnt clay), not sage | User pivoted to Claude-mobile aesthetic mid-consultation; sage was held back as a secondary "calm" hue used only on tags. |
-| 2026-05-08 | Disclaimer shown once (Onboarding step 2) | Repeating warnings on every screen looks alarmist and untrustworthy. One prominent disclaimer + always-reachable via Settings is more honest. |
+| 2026-05-08 | Disclaimer shown once (Onboarding step 2), deferred until onboarding/settings exist | Repeating warnings on every screen looks alarmist and untrustworthy. One prominent disclaimer + always-reachable via Settings is more honest. |
 | 2026-05-08 | App is framed as a product, not a "learning project" | The internal repo can call this a learning project; the user-facing app cannot — it undermines the product's seriousness. |
 | 2026-05-08 | Confidence shown as text + dot on primary Result, bar list on Detail | Bars overclaim precision on the main screen. On Detail the user is digging in, so the bar list is appropriate context. |
 | 2026-05-08 | Geist over Inter for body | Inter is the AI-design convergence default. Geist is a peer in quality without that signature. |

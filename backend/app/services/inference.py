@@ -2,12 +2,8 @@
 from typing import Any
 
 from ..config import settings
-
-_MODEL = None  # lazy-loaded in Phase 1 from settings.model_path
+from ml.inference.predict import InvalidImageError, predict
 
 
 def predict_lesion(image_bytes: bytes) -> dict[str, Any]:
-    # TODO (Phase 1): if _MODEL is None, load checkpoint from settings.model_path,
-    # apply ml.preprocessing.get_transforms("val"), run forward pass.
-    _ = settings.model_path
-    return {"label": "unknown", "confidence": 0.0}
+    return predict(image_bytes, model_path=settings.resolved_model_path)
