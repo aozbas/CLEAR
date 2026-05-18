@@ -12,7 +12,7 @@ class Settings(BaseSettings):
 
     supabase_url: str
     supabase_service_role_key: str
-    model_path: str = "ml/models/lesion_classifier_binary.pt"
+    model_path: str = "ml/models/lesion_classifier_ham10000.pt"
 
     @property
     def resolved_model_path(self) -> Path:
