@@ -32,6 +32,10 @@ desktop.ini
 !.vscode/
 !.vscode/settings.json
 
+docs/
+AGENTS.md
+PROJECT.md
+
 # ── MCP config (contains project ref) ───────────────────
 .mcp.json
 
