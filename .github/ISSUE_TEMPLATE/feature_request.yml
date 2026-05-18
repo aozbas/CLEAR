@@ -1,0 +1,39 @@
+name: Feature request
+description: Propose a focused project improvement.
+title: "Add "
+labels:
+  - enhancement
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Mobile
+        - Backend
+        - ML
+        - Supabase
+        - CI
+    validations:
+      required: true
+
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What should this change accomplish?
+    validations:
+      required: true
+
+  - type: textarea
+    id: approach
+    attributes:
+      label: Possible approach
+      description: Any implementation notes or constraints.
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope check
+      options:
+        - label: This is a focused change that fits the current project direction.

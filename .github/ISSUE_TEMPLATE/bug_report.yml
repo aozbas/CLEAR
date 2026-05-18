@@ -1,0 +1,40 @@
+name: Bug report
+description: Report something that is broken or behaving unexpectedly.
+title: "Fix "
+labels:
+  - bug
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Mobile
+        - Backend
+        - ML
+        - Supabase
+        - CI
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should have happened instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Logs, screenshots, commands, or device details.
