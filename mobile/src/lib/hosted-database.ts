@@ -3,11 +3,11 @@ import { createClient, processLock } from "@hosted_database/hosted_database-js";
 import { AppState, Platform } from "react-native";
 
 const url = process.env.EXPO_PUBLIC_HOSTED_DATABASE_URL;
-const key = process.env.EXPO_PUBLIC_HOSTED_DATABASE_ANON_KEY;
+const key = process.env.EXPO_PUBLIC_HOSTED_DATABASE_PUBLISHABLE_KEY;
 
 if (!url || !key) {
   throw new Error(
-    "Missing Hosted database config. Create mobile/.env from mobile/.env.example and fill in EXPO_PUBLIC_HOSTED_DATABASE_URL and EXPO_PUBLIC_HOSTED_DATABASE_ANON_KEY."
+    "Missing Hosted database config. Create mobile/.env from mobile/.env.example and fill in EXPO_PUBLIC_HOSTED_DATABASE_URL and EXPO_PUBLIC_HOSTED_DATABASE_PUBLISHABLE_KEY."
   );
 }
 
