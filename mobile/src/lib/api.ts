@@ -19,10 +19,34 @@ export type Scan = {
   created_at: string;
 };
 
-async function authHeader(): Promise<Record<string, string>> {
-  const { data } = await supabase.auth.getSession();
+async function authHeader(forceRefresh = false): Promise<Record<string, string>> {
+  const { data, error } = forceRefresh
+    ? await supabase.auth.refreshSession()
+    : await supabase.auth.getSession();
+  if (error) {
+    await supabase.auth.signOut({ scope: "local" });
+    throw new Error("Session expired. Please sign in again.");
+  }
+
   const token = data.session?.access_token;
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  if (!token) {
+    await supabase.auth.signOut({ scope: "local" });
+    throw new Error("Please sign in to continue.");
+  }
+
+  return { Authorization: `Bearer ${token}` };
+}
+
+async function fetchWithAuth(path: string, init: RequestInit = {}): Promise<Response> {
+  const headers = { ...(init.headers as Record<string, string> | undefined), ...(await authHeader()) };
+  const response = await fetch(`${BASE}${path}`, { ...init, headers });
+  if (response.status !== 401) return response;
+
+  const retryHeaders = {
+    ...(init.headers as Record<string, string> | undefined),
+    ...(await authHeader(true)),
+  };
+  return fetch(`${BASE}${path}`, { ...init, headers: retryHeaders });
 }
 
 async function parseOrThrow<T>(r: Response): Promise<T> {
@@ -49,15 +73,14 @@ export async function predict(imageUri: string): Promise<PredictionResponse> {
   const form = new FormData();
   // @ts-expect-error RN FormData file shape
   form.append("image", { uri: imageUri, name: "scan.jpg", type: "image/jpeg" });
-  const r = await fetch(`${BASE}/predictions`, {
+  const r = await fetchWithAuth("/predictions", {
     method: "POST",
     body: form,
-    headers: await authHeader(),
   });
   return parseOrThrow<PredictionResponse>(r);
 }
 
 export async function listScans(): Promise<{ scans: Scan[] }> {
-  const r = await fetch(`${BASE}/scans`, { headers: await authHeader() });
+  const r = await fetchWithAuth("/scans");
   return parseOrThrow<{ scans: Scan[] }>(r);
 }
