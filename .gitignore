@@ -16,6 +16,8 @@ ml/models/*.pt
 .env
 .env.*
 !.env.example
+.kaggle/
+kaggle.json
 
 # ── Mobile ───────────────────────────────────────────────
 node_modules/
