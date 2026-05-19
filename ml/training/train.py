@@ -1,4 +1,4 @@
-"""Train the Phase 1 binary HAM10000 classifier.
+"""Train a HAM10000 classifier.
 
 Run from the project root:
     python -m ml.training.train
@@ -24,11 +24,27 @@ from ml.preprocessing import get_transforms
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SPLIT_CSV = PROJECT_ROOT / "ml" / "data" / "splits" / "ham10000.csv"
-DEFAULT_CHECKPOINT = PROJECT_ROOT / "ml" / "models" / "lesion_classifier_binary.pt"
 DEFAULT_SEED = 42
 
-LABELS = ["non_suspicious", "suspicious"]
-LABEL_TO_IDX = {label: idx for idx, label in enumerate(LABELS)}
+BINARY_LABELS = ["non_suspicious", "suspicious"]
+HAM10000_LABELS = [
+    "melanoma",
+    "nevus",
+    "basal_cell_carcinoma",
+    "actinic_keratosis",
+    "benign_keratosis",
+    "dermatofibroma",
+    "vascular_lesion",
+]
+LABEL_MODES = {
+    "binary": BINARY_LABELS,
+    "ham10000": HAM10000_LABELS,
+}
+DEFAULT_LABEL_MODE = "ham10000"
+DEFAULT_CHECKPOINTS = {
+    "binary": PROJECT_ROOT / "ml" / "models" / "lesion_classifier_binary.pt",
+    "ham10000": PROJECT_ROOT / "ml" / "models" / "lesion_classifier_ham10000.pt",
+}
 SUSPICIOUS_CANONICAL_LABELS = {
     "melanoma",
     "basal_cell_carcinoma",
@@ -43,9 +59,15 @@ NON_SUSPICIOUS_CANONICAL_LABELS = {
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Train a binary HAM10000 classifier.")
+    parser = argparse.ArgumentParser(description="Train a HAM10000 classifier.")
     parser.add_argument("--split-csv", type=Path, default=DEFAULT_SPLIT_CSV)
-    parser.add_argument("--checkpoint", type=Path, default=DEFAULT_CHECKPOINT)
+    parser.add_argument(
+        "--label-mode",
+        choices=sorted(LABEL_MODES),
+        default=DEFAULT_LABEL_MODE,
+        help="Use 'ham10000' for Phase 2 7-class training or 'binary' for the Phase 1 fallback.",
+    )
+    parser.add_argument("--checkpoint", type=Path, default=None)
     parser.add_argument("--epochs", type=int, default=5)
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--lr", type=float, default=1e-3)
@@ -65,6 +87,23 @@ def canonical_to_binary(label: str) -> str:
     if label in NON_SUSPICIOUS_CANONICAL_LABELS:
         return "non_suspicious"
     raise ValueError(f"Unknown canonical label for binary training: {label!r}")
+
+
+def labels_for_mode(label_mode: str) -> list[str]:
+    try:
+        return list(LABEL_MODES[label_mode])
+    except KeyError as exc:
+        raise ValueError(f"Unknown label mode: {label_mode!r}") from exc
+
+
+def canonical_to_training_label(label: str, label_mode: str) -> str:
+    if label_mode == "binary":
+        return canonical_to_binary(label)
+    if label_mode == "ham10000":
+        if label not in HAM10000_LABELS:
+            raise ValueError(f"Unknown HAM10000 canonical label: {label!r}")
+        return label
+    raise ValueError(f"Unknown label mode: {label_mode!r}")
 
 
 def resolve_project_path(path: Path) -> Path:
@@ -91,11 +130,44 @@ def get_device(name: str) -> torch.device:
     return torch.device("cpu")
 
 
-class Ham10000BinaryDataset(Dataset):
+def sample_training_rows(
+    rows: pd.DataFrame,
+    labels: list[str],
+    max_samples: int,
+    seed: int,
+) -> pd.DataFrame:
+    if max_samples < len(labels):
+        raise ValueError(
+            f"max_train_samples={max_samples} is too small for {len(labels)} labels."
+        )
+
+    required_samples = []
+    remaining_rows = rows
+    for offset, label in enumerate(labels):
+        label_rows = rows[rows["training_label"] == label]
+        if label_rows.empty:
+            raise ValueError(f"No training rows found for label={label!r}")
+        sample = label_rows.sample(n=1, random_state=seed + offset)
+        required_samples.append(sample)
+        remaining_rows = remaining_rows.drop(index=sample.index)
+
+    remaining_count = max_samples - len(required_samples)
+    if remaining_count > 0:
+        required_samples.append(
+            remaining_rows.sample(n=remaining_count, random_state=seed)
+        )
+
+    return pd.concat(required_samples).sort_values("image_path")
+
+
+class Ham10000Dataset(Dataset):
     def __init__(
         self,
         split_csv: Path,
         split: str,
+        label_mode: str,
+        labels: list[str],
+        label_to_idx: dict[str, int],
         max_samples: int | None = None,
         seed: int = DEFAULT_SEED,
     ) -> None:
@@ -105,14 +177,21 @@ class Ham10000BinaryDataset(Dataset):
             raise ValueError(f"No rows found for split={split!r} in {split_csv}")
 
         try:
-            rows["binary_label"] = rows["label"].apply(canonical_to_binary)
+            rows["training_label"] = rows["label"].apply(
+                lambda label: canonical_to_training_label(label, label_mode)
+            )
         except ValueError as exc:
             raise ValueError(f"Unknown labels in split CSV {split_csv}") from exc
 
         if max_samples is not None and max_samples < len(rows):
-            rows = rows.sample(n=max_samples, random_state=seed).sort_values("image_path")
+            if split == "train":
+                rows = sample_training_rows(rows, labels, max_samples, seed)
+            else:
+                rows = rows.sample(n=max_samples, random_state=seed).sort_values("image_path")
 
         self.rows = rows.reset_index(drop=True)
+        self.label_names = labels
+        self.label_to_idx = label_to_idx
         self.transform = get_transforms("train" if split == "train" else "val")
 
     def __len__(self) -> int:
@@ -122,18 +201,18 @@ class Ham10000BinaryDataset(Dataset):
         row = self.rows.iloc[index]
         image_path = resolve_project_path(Path(row["image_path"]))
         image = Image.open(image_path).convert("RGB")
-        label = LABEL_TO_IDX[row["binary_label"]]
+        label = self.label_to_idx[row["training_label"]]
         return self.transform(image), label
 
     def labels(self) -> list[int]:
-        return [LABEL_TO_IDX[label] for label in self.rows["binary_label"].tolist()]
+        return [self.label_to_idx[label] for label in self.rows["training_label"].tolist()]
 
 
-def class_weights(labels: Iterable[int], device: torch.device) -> torch.Tensor:
-    counts = torch.bincount(torch.tensor(list(labels)), minlength=len(LABELS)).float()
+def class_weights(labels: Iterable[int], num_classes: int, device: torch.device) -> torch.Tensor:
+    counts = torch.bincount(torch.tensor(list(labels)), minlength=num_classes).float()
     if (counts == 0).any():
         raise ValueError(f"Every class needs at least one training example. Counts: {counts.tolist()}")
-    weights = counts.sum() / (len(LABELS) * counts)
+    weights = counts.sum() / (num_classes * counts)
     return weights.to(device)
 
 
@@ -152,6 +231,7 @@ def run_epoch(
     loader: DataLoader,
     criterion: nn.Module,
     device: torch.device,
+    label_names: list[str],
     optimizer: torch.optim.Optimizer | None = None,
 ) -> dict:
     training = optimizer is not None
@@ -160,7 +240,7 @@ def run_epoch(
     total_loss = 0.0
     total_correct = 0
     total = 0
-    confusion = torch.zeros((len(LABELS), len(LABELS)), dtype=torch.long)
+    confusion = torch.zeros((len(label_names), len(label_names)), dtype=torch.long)
 
     with torch.set_grad_enabled(training):
         for images, targets in loader:
@@ -185,12 +265,17 @@ def run_epoch(
             for truth, pred in zip(targets.cpu(), predictions.cpu(), strict=True):
                 confusion[int(truth), int(pred)] += 1
 
-    return metrics_from_confusion(total_loss / total, total_correct / total, confusion)
+    return metrics_from_confusion(total_loss / total, total_correct / total, confusion, label_names)
 
 
-def metrics_from_confusion(loss: float, accuracy: float, confusion: torch.Tensor) -> dict:
+def metrics_from_confusion(
+    loss: float,
+    accuracy: float,
+    confusion: torch.Tensor,
+    label_names: list[str],
+) -> dict:
     per_class = {}
-    for idx, label in enumerate(LABELS):
+    for idx, label in enumerate(label_names):
         tp = int(confusion[idx, idx])
         fp = int(confusion[:, idx].sum().item() - tp)
         fn = int(confusion[idx, :].sum().item() - tp)
@@ -224,22 +309,30 @@ def print_metrics(split: str, metrics: dict) -> None:
         )
 
 
-def save_checkpoint(path: Path, model: nn.Module, epoch: int, val_metrics: dict) -> None:
+def save_checkpoint(
+    path: Path,
+    model: nn.Module,
+    epoch: int,
+    val_metrics: dict,
+    labels: list[str],
+    label_to_idx: dict[str, int],
+    label_mode: str,
+) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    torch.save(
-        {
-            "model_state_dict": model.state_dict(),
-            "epoch": epoch,
-            "labels": LABELS,
-            "label_to_idx": LABEL_TO_IDX,
-            "binary_groups": {
-                "suspicious": sorted(SUSPICIOUS_CANONICAL_LABELS),
-                "non_suspicious": sorted(NON_SUSPICIOUS_CANONICAL_LABELS),
-            },
-            "val_metrics": val_metrics,
-        },
-        path,
-    )
+    checkpoint = {
+        "model_state_dict": model.state_dict(),
+        "epoch": epoch,
+        "labels": labels,
+        "label_to_idx": label_to_idx,
+        "label_mode": label_mode,
+        "val_metrics": val_metrics,
+    }
+    if label_mode == "binary":
+        checkpoint["binary_groups"] = {
+            "suspicious": sorted(SUSPICIOUS_CANONICAL_LABELS),
+            "non_suspicious": sorted(NON_SUSPICIOUS_CANONICAL_LABELS),
+        }
+    torch.save(checkpoint, path)
 
 
 def main() -> None:
@@ -249,23 +342,35 @@ def main() -> None:
     print(f"Using device: {device}")
 
     split_csv = resolve_project_path(args.split_csv)
-    checkpoint = resolve_project_path(args.checkpoint)
+    checkpoint_arg = args.checkpoint or DEFAULT_CHECKPOINTS[args.label_mode]
+    checkpoint = resolve_project_path(checkpoint_arg)
+    labels = labels_for_mode(args.label_mode)
+    label_to_idx = {label: idx for idx, label in enumerate(labels)}
 
-    train_dataset = Ham10000BinaryDataset(
+    train_dataset = Ham10000Dataset(
         split_csv,
         "train",
+        args.label_mode,
+        labels,
+        label_to_idx,
         max_samples=args.max_train_samples,
         seed=args.seed,
     )
-    val_dataset = Ham10000BinaryDataset(
+    val_dataset = Ham10000Dataset(
         split_csv,
         "val",
+        args.label_mode,
+        labels,
+        label_to_idx,
         max_samples=args.max_val_samples,
         seed=args.seed,
     )
-    test_dataset = Ham10000BinaryDataset(
+    test_dataset = Ham10000Dataset(
         split_csv,
         "test",
+        args.label_mode,
+        labels,
+        label_to_idx,
         max_samples=args.max_test_samples,
         seed=args.seed,
     )
@@ -279,8 +384,8 @@ def main() -> None:
     val_loader = build_loader(val_dataset, args.batch_size, shuffle=False, num_workers=args.num_workers)
     test_loader = build_loader(test_dataset, args.batch_size, shuffle=False, num_workers=args.num_workers)
 
-    model = build_model(num_classes=len(LABELS)).to(device)
-    criterion = nn.CrossEntropyLoss(weight=class_weights(train_dataset.labels(), device))
+    model = build_model(num_classes=len(labels)).to(device)
+    criterion = nn.CrossEntropyLoss(weight=class_weights(train_dataset.labels(), len(labels), device))
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
     best_val_loss = float("inf")
@@ -288,8 +393,8 @@ def main() -> None:
 
     for epoch in range(1, args.epochs + 1):
         print(f"\nEpoch {epoch}/{args.epochs}")
-        train_metrics = run_epoch(model, train_loader, criterion, device, optimizer)
-        val_metrics = run_epoch(model, val_loader, criterion, device)
+        train_metrics = run_epoch(model, train_loader, criterion, device, labels, optimizer)
+        val_metrics = run_epoch(model, val_loader, criterion, device, labels)
 
         print_metrics("train", train_metrics)
         print_metrics("val", val_metrics)
@@ -297,12 +402,12 @@ def main() -> None:
         if val_metrics["loss"] < best_val_loss:
             best_val_loss = val_metrics["loss"]
             best_epoch = epoch
-            save_checkpoint(checkpoint, model, epoch, val_metrics)
+            save_checkpoint(checkpoint, model, epoch, val_metrics, labels, label_to_idx, args.label_mode)
             print(f"Saved checkpoint: {checkpoint}")
 
     checkpoint_data = torch.load(checkpoint, map_location=device)
     model.load_state_dict(checkpoint_data["model_state_dict"])
-    test_metrics = run_epoch(model, test_loader, criterion, device)
+    test_metrics = run_epoch(model, test_loader, criterion, device, labels)
 
     print(f"\nBest epoch: {best_epoch}")
     print_metrics("test", test_metrics)

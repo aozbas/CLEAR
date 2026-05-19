@@ -14,8 +14,17 @@ from ml.preprocessing import get_transforms
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_MODEL_PATH = PROJECT_ROOT / "ml" / "models" / "lesion_classifier_binary.pt"
-DEFAULT_LABELS = ["non_suspicious", "suspicious"]
+DEFAULT_MODEL_PATH = PROJECT_ROOT / "ml" / "models" / "lesion_classifier_ham10000.pt"
+HAM10000_LABELS = [
+    "melanoma",
+    "nevus",
+    "basal_cell_carcinoma",
+    "actinic_keratosis",
+    "benign_keratosis",
+    "dermatofibroma",
+    "vascular_lesion",
+]
+DEFAULT_LABELS = HAM10000_LABELS
 
 _MODEL: torch.nn.Module | None = None
 _MODEL_PATH: Path | None = None
