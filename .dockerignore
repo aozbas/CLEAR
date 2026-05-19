@@ -16,7 +16,10 @@ supabase
 
 .env
 .env.*
+**/.env
+**/.env.*
 !*.env.example
+!**/.env.example
 .mcp.json
 .kaggle
 kaggle.json
