@@ -5,10 +5,10 @@ WORKDIR /workspace
 ENV PYTHONPATH=/workspace
 ENV PYTHONUNBUFFERED=1
 ENV PIP_NO_CACHE_DIR=1
+ENV PIP_BREAK_SYSTEM_PACKAGES=1
 
 COPY docker/ml-requirements.txt /tmp/ml-requirements.txt
 RUN python -m pip install --upgrade pip \
-    && python -m pip install --index-url https://download.pytorch.org/whl/cu128 torch==2.11.0 torchvision==0.26.0 \
     && python -m pip install -r /tmp/ml-requirements.txt
 
 COPY ml ./ml
