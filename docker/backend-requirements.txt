@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+pydantic
+pydantic-settings
+python-multipart
+hosted_database
+httpx
+pillow==12.2.0
