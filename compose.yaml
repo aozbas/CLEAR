@@ -1,0 +1,14 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    image: clear-backend:dev
+    env_file:
+      - backend/.env
+    environment:
+      MODEL_PATH: /workspace/ml/models/lesion_classifier_ham10000.pt
+    volumes:
+      - ./ml/models/lesion_classifier_ham10000.pt:/workspace/ml/models/lesion_classifier_ham10000.pt:ro
+    ports:
+      - "8000:8000"

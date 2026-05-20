@@ -8,7 +8,7 @@ on:
 
 jobs:
   typecheck:
-    name: Type check
+    name: Mobile type check
     runs-on: ubuntu-latest
 
     defaults:
