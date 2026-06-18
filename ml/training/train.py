@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import argparse
 import random
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 import numpy as np
 import pandas as pd
@@ -20,7 +20,6 @@ from torch.utils.data import DataLoader, Dataset
 
 from ml.models.classifier import build_model
 from ml.preprocessing import get_transforms
-
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SPLIT_CSV = PROJECT_ROOT / "ml" / "data" / "splits" / "ham10000.csv"
@@ -137,9 +136,7 @@ def sample_training_rows(
     seed: int,
 ) -> pd.DataFrame:
     if max_samples < len(labels):
-        raise ValueError(
-            f"max_train_samples={max_samples} is too small for {len(labels)} labels."
-        )
+        raise ValueError(f"max_train_samples={max_samples} is too small for {len(labels)} labels.")
 
     required_samples = []
     remaining_rows = rows
@@ -153,9 +150,7 @@ def sample_training_rows(
 
     remaining_count = max_samples - len(required_samples)
     if remaining_count > 0:
-        required_samples.append(
-            remaining_rows.sample(n=remaining_count, random_state=seed)
-        )
+        required_samples.append(remaining_rows.sample(n=remaining_count, random_state=seed))
 
     return pd.concat(required_samples).sort_values("image_path")
 
@@ -211,7 +206,9 @@ class Ham10000Dataset(Dataset):
 def class_weights(labels: Iterable[int], num_classes: int, device: torch.device) -> torch.Tensor:
     counts = torch.bincount(torch.tensor(list(labels)), minlength=num_classes).float()
     if (counts == 0).any():
-        raise ValueError(f"Every class needs at least one training example. Counts: {counts.tolist()}")
+        raise ValueError(
+            f"Every class needs at least one training example. Counts: {counts.tolist()}"
+        )
     weights = counts.sum() / (num_classes * counts)
     return weights.to(device)
 
@@ -376,16 +373,23 @@ def main() -> None:
     )
 
     print(
-        "Dataset sizes: "
-        f"train={len(train_dataset)} val={len(val_dataset)} test={len(test_dataset)}"
+        f"Dataset sizes: train={len(train_dataset)} val={len(val_dataset)} test={len(test_dataset)}"
     )
 
-    train_loader = build_loader(train_dataset, args.batch_size, shuffle=True, num_workers=args.num_workers)
-    val_loader = build_loader(val_dataset, args.batch_size, shuffle=False, num_workers=args.num_workers)
-    test_loader = build_loader(test_dataset, args.batch_size, shuffle=False, num_workers=args.num_workers)
+    train_loader = build_loader(
+        train_dataset, args.batch_size, shuffle=True, num_workers=args.num_workers
+    )
+    val_loader = build_loader(
+        val_dataset, args.batch_size, shuffle=False, num_workers=args.num_workers
+    )
+    test_loader = build_loader(
+        test_dataset, args.batch_size, shuffle=False, num_workers=args.num_workers
+    )
 
     model = build_model(num_classes=len(labels)).to(device)
-    criterion = nn.CrossEntropyLoss(weight=class_weights(train_dataset.labels(), len(labels), device))
+    criterion = nn.CrossEntropyLoss(
+        weight=class_weights(train_dataset.labels(), len(labels), device)
+    )
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
     best_val_loss = float("inf")
@@ -402,7 +406,9 @@ def main() -> None:
         if val_metrics["loss"] < best_val_loss:
             best_val_loss = val_metrics["loss"]
             best_epoch = epoch
-            save_checkpoint(checkpoint, model, epoch, val_metrics, labels, label_to_idx, args.label_mode)
+            save_checkpoint(
+                checkpoint, model, epoch, val_metrics, labels, label_to_idx, args.label_mode
+            )
             print(f"Saved checkpoint: {checkpoint}")
 
     checkpoint_data = torch.load(checkpoint, map_location=device)

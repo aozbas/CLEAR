@@ -21,9 +21,7 @@ def _detect_image_type(image_bytes: bytes) -> tuple[str, str]:
 def upload_scan_image(image_bytes: bytes, user_id: str) -> str:
     ext, content_type = _detect_image_type(image_bytes)
     path = f"{user_id}/{uuid4()}.{ext}"
-    hosted_database.storage.from_(BUCKET).upload(
-        path, image_bytes, {"content-type": content_type}
-    )
+    hosted_database.storage.from_(BUCKET).upload(path, image_bytes, {"content-type": content_type})
     return path
 
 
@@ -31,9 +29,7 @@ def create_signed_image_url(path: str, expires_in: int = 60 * 60) -> str:
     response = hosted_database.storage.from_(BUCKET).create_signed_url(path, expires_in)
     if isinstance(response, dict):
         signed_url = (
-            response.get("signedURL")
-            or response.get("signedUrl")
-            or response.get("signed_url")
+            response.get("signedURL") or response.get("signedUrl") or response.get("signed_url")
         )
         if signed_url:
             return signed_url

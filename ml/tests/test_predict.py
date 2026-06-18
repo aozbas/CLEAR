@@ -1,6 +1,12 @@
 import unittest
 
-from ml.inference.predict import HAM10000_LABELS, DEFAULT_LABELS, InvalidImageError, get_checkpoint_labels, load_image
+from ml.inference.predict import (
+    DEFAULT_LABELS,
+    HAM10000_LABELS,
+    InvalidImageError,
+    get_checkpoint_labels,
+    load_image,
+)
 
 
 class CheckpointLabelTests(unittest.TestCase):

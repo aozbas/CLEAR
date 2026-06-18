@@ -6,7 +6,10 @@
     "start": "expo start",
     "ios": "expo start --ios",
     "android": "expo start --android",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "audit:high": "npm audit --audit-level=high"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -18,6 +21,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.1.10",
+    "prettier": "^3.8.4",
     "typescript": "~5.9.2"
   },
   "private": true
