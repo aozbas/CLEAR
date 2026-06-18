@@ -15,7 +15,6 @@ from pathlib import Path
 
 import pandas as pd
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_RAW_DIR = PROJECT_ROOT / "ml" / "data" / "raw" / "ham10000"
 DEFAULT_OUT_PATH = PROJECT_ROOT / "ml" / "data" / "splits" / "ham10000.csv"
@@ -83,7 +82,7 @@ def assign_lesion_splits(lesions: pd.DataFrame, seed: int) -> dict[str, str]:
     rng = random.Random(seed)
     assignments: dict[str, str] = {}
 
-    for label, group in lesions.groupby("label", sort=True):
+    for _label, group in lesions.groupby("label", sort=True):
         lesion_ids = sorted(group["lesion_id"].tolist())
         rng.shuffle(lesion_ids)
 

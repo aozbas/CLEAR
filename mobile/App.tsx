@@ -42,11 +42,7 @@ export default function App() {
   return (
     <>
       <StatusBar barStyle="dark-content" />
-      {session ? (
-        <Home email={session.user.email ?? "(no email)"} />
-      ) : (
-        <LoginScreen />
-      )}
+      {session ? <Home email={session.user.email ?? "(no email)"} /> : <LoginScreen />}
     </>
   );
 }
