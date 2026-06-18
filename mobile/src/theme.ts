@@ -17,8 +17,8 @@ export const theme = {
   },
   radii: { sm: 8, md: 12, lg: 18, sheet: 24, pill: 999 },
   spacing: { xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 48, xxxl: 64 },
-  // Per DESIGN.md the spec is Source Serif 4 / Geist via expo-font; we use the
-  // platform fallbacks documented there until font loading is wired up.
+  // The private mobile design spec uses Source Serif 4 / Geist via expo-font; use
+  // platform fallbacks until font loading is wired up.
   fonts: {
     sans: undefined as string | undefined,
     serif: Platform.select({ ios: "Georgia", android: "serif", default: "serif" }),

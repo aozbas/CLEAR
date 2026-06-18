@@ -1,11 +1,11 @@
+import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
-import unittest
 
 from ml.training.train import (
     BINARY_LABELS,
-    Ham10000Dataset,
     HAM10000_LABELS,
+    Ham10000Dataset,
     canonical_to_binary,
     canonical_to_training_label,
     labels_for_mode,

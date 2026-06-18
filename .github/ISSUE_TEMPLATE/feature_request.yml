@@ -14,6 +14,21 @@ body:
         - ML
         - Hosted database
         - CI
+        - Docs/private notes
+    validations:
+      required: true
+
+  - type: dropdown
+    id: phase
+    attributes:
+      label: Target phase
+      options:
+        - Post-Phase-2 runtime/training setup
+        - Phase 3 multi-dataset expansion
+        - Phase 4 UX/responsibility polish
+        - Phase 5 deferred RL
+        - Maintenance/professionalization
+        - Unsure
     validations:
       required: true
 
@@ -29,11 +44,20 @@ body:
     id: approach
     attributes:
       label: Possible approach
-      description: Any implementation notes or constraints.
+      description: Implementation notes, constraints, or alternatives.
+
+  - type: textarea
+    id: done
+    attributes:
+      label: Definition of done
+      description: What checks, behavior, or documentation prove this is finished?
 
   - type: checkboxes
     id: scope
     attributes:
       label: Scope check
       options:
-        - label: This is a focused change that fits the current project direction.
+        - label: This fits the current phase and does not introduce later-phase features early.
+          required: true
+        - label: This keeps mobile, backend, ML, and Hosted database responsibilities separated.
+        - label: This avoids medical-certainty language and frames outputs as experimental classifications.

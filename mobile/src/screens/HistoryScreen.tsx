@@ -63,9 +63,7 @@ export default function HistoryScreen({ email, onScan, onSignOut }: Props) {
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={() => load("refresh")} />
-      }
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load("refresh")} />}
     >
       <View style={styles.topBar}>
         <Text style={styles.wordmark}>CLEAR</Text>
@@ -99,7 +97,11 @@ export default function HistoryScreen({ email, onScan, onSignOut }: Props) {
           active={filter === "closer"}
           onPress={() => setFilter("closer")}
         />
-        <FilterChip label="Low concern" active={filter === "low"} onPress={() => setFilter("low")} />
+        <FilterChip
+          label="Low concern"
+          active={filter === "low"}
+          onPress={() => setFilter("low")}
+        />
       </View>
 
       {loading ? (
@@ -136,13 +138,8 @@ function FilterChip({
   onPress: () => void;
 }) {
   return (
-    <Pressable
-      onPress={onPress}
-      style={[styles.filterChip, active && styles.filterChipActive]}
-    >
-      <Text style={[styles.filterChipLabel, active && styles.filterChipLabelActive]}>
-        {label}
-      </Text>
+    <Pressable onPress={onPress} style={[styles.filterChip, active && styles.filterChipActive]}>
+      <Text style={[styles.filterChipLabel, active && styles.filterChipLabelActive]}>{label}</Text>
     </Pressable>
   );
 }
@@ -159,12 +156,7 @@ function HistoryRow({ scan }: { scan: Scan }) {
       )}
 
       <View style={styles.rowMain}>
-        <View
-          style={[
-            styles.tag,
-            closer ? styles.tagCloser : styles.tagLow,
-          ]}
-        >
+        <View style={[styles.tag, closer ? styles.tagCloser : styles.tagLow]}>
           <Text style={[styles.tagText, closer ? styles.tagTextCloser : styles.tagTextLow]}>
             {tagLabel(scan.label)}
           </Text>

@@ -38,7 +38,10 @@ async function authHeader(forceRefresh = false): Promise<Record<string, string>>
 }
 
 async function fetchWithAuth(path: string, init: RequestInit = {}): Promise<Response> {
-  const headers = { ...(init.headers as Record<string, string> | undefined), ...(await authHeader()) };
+  const headers = {
+    ...(init.headers as Record<string, string> | undefined),
+    ...(await authHeader()),
+  };
   const response = await fetch(`${BASE}${path}`, { ...init, headers });
   if (response.status !== 401) return response;
 
