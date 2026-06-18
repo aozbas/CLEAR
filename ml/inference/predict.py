@@ -12,7 +12,6 @@ from PIL import Image, UnidentifiedImageError
 from ml.models.classifier import build_model
 from ml.preprocessing import get_transforms
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_MODEL_PATH = PROJECT_ROOT / "ml" / "models" / "lesion_classifier_ham10000.pt"
 HAM10000_LABELS = [
@@ -69,12 +68,18 @@ def get_checkpoint_labels(checkpoint: Any) -> list[str]:
         return DEFAULT_LABELS
 
     labels = checkpoint.get("labels", DEFAULT_LABELS)
-    if not isinstance(labels, list) or not labels or not all(isinstance(label, str) for label in labels):
+    if (
+        not isinstance(labels, list)
+        or not labels
+        or not all(isinstance(label, str) for label in labels)
+    ):
         raise ValueError("Checkpoint labels must be a non-empty list of strings.")
     return labels
 
 
-def load_model(model_path: str | Path | None = None, device: str | torch.device | None = None) -> torch.nn.Module:
+def load_model(
+    model_path: str | Path | None = None, device: str | torch.device | None = None
+) -> torch.nn.Module:
     global _MODEL, _MODEL_PATH, _DEVICE, _MODEL_LABELS
 
     resolved_path = resolve_model_path(model_path).resolve()
@@ -89,7 +94,11 @@ def load_model(model_path: str | Path | None = None, device: str | torch.device 
         )
 
     checkpoint = torch.load(resolved_path, map_location=resolved_device)
-    state_dict = checkpoint.get("model_state_dict", checkpoint) if isinstance(checkpoint, dict) else checkpoint
+    state_dict = (
+        checkpoint.get("model_state_dict", checkpoint)
+        if isinstance(checkpoint, dict)
+        else checkpoint
+    )
     labels = get_checkpoint_labels(checkpoint)
 
     model = build_model(num_classes=len(labels)).to(resolved_device)

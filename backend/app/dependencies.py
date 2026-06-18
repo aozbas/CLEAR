@@ -11,8 +11,8 @@ async def get_current_user_id(authorization: str | None = Header(default=None)) 
     token = authorization.removeprefix("Bearer ")
     try:
         response = supabase.auth.get_user(token)
-    except Exception:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    except Exception as exc:
+        raise HTTPException(status_code=401, detail="Invalid or expired token") from exc
     if response.user is None:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
     return response.user.id

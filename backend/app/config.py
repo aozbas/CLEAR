@@ -1,7 +1,8 @@
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from supabase import create_client, Client
+
+from supabase import Client, create_client
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 PROJECT_ROOT = Path(__file__).resolve().parents[2]

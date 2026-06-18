@@ -99,7 +99,7 @@ export default function ScanScreen({ onHistory }: Props) {
 
       {result ? (
         <View style={styles.resultBlock}>
-          <Text style={styles.resultLabel}>Result</Text>
+          <Text style={styles.resultLabel}>Experimental classification</Text>
           <Text style={styles.headline}>{displayLabel(result.label)}</Text>
           <View style={styles.confidenceRow}>
             <View
@@ -109,10 +109,10 @@ export default function ScanScreen({ onHistory }: Props) {
               ]}
             />
             <Text style={styles.confidenceText}>
-              Confidence {formatConfidence(result.confidence)}
+              Model confidence {formatConfidence(result.confidence)}
             </Text>
           </View>
-          <Text style={styles.savedText}>Saved to history</Text>
+          <Text style={styles.savedText}>Saved to history as an experimental result</Text>
         </View>
       ) : null}
 

@@ -1,0 +1,55 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+
+  - package-ecosystem: npm
+    directory: /mobile
+    schedule:
+      interval: weekly
+    groups:
+      mobile-dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      python-dev-dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: pip
+    directory: /backend
+    schedule:
+      interval: weekly
+    groups:
+      backend-dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: pip
+    directory: /ml
+    schedule:
+      interval: weekly
+    groups:
+      ml-dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: pip
+    directory: /docker
+    schedule:
+      interval: weekly
+    groups:
+      docker-python-dependencies:
+        patterns:
+          - "*"

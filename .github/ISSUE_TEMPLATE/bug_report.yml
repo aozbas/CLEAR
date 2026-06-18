@@ -1,5 +1,5 @@
 name: Bug report
-description: Report something that is broken or behaving unexpectedly.
+description: Report something broken or behaving unexpectedly.
 title: "Fix "
 labels:
   - bug
@@ -14,6 +14,22 @@ body:
         - ML
         - Supabase
         - CI
+        - Docs/private notes
+    validations:
+      required: true
+
+  - type: dropdown
+    id: phase
+    attributes:
+      label: Project phase
+      options:
+        - Post-Phase-2 runtime/training setup
+        - Phase 0 foundation
+        - Phase 1 binary baseline
+        - Phase 2 HAM10000 7-class baseline
+        - Phase 3 multi-dataset expansion
+        - Phase 4 UX/responsibility polish
+        - Unsure
     validations:
       required: true
 
@@ -21,7 +37,7 @@ body:
     id: problem
     attributes:
       label: Problem
-      description: What happened?
+      description: What happened? Include the command, screen, endpoint, or workflow name.
     validations:
       required: true
 
@@ -34,7 +50,26 @@ body:
       required: true
 
   - type: textarea
-    id: notes
+    id: reproduce
     attributes:
-      label: Notes
-      description: Logs, screenshots, commands, or device details.
+      label: Reproduction steps
+      description: List the shortest reliable steps or commands.
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Logs, screenshots, device details, environment versions, or GitHub Actions links.
+
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: This issue does not include real secrets, tokens, PHI, PII, or other regulated data.
+          required: true
+        - label: Any model output is described as an experimental classification, not a diagnosis.

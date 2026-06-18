@@ -1,0 +1,78 @@
+name: Training run
+description: Record or plan a reproducible ML training run.
+title: "Run training: "
+labels:
+  - enhancement
+body:
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Compute platform
+      options:
+        - Local CPU/GPU
+        - UCSD Research Cluster
+        - UCSD DSMLP
+        - NVIDIA LaunchPad
+        - Paid GPU cloud
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: gpu
+    attributes:
+      label: GPU / accelerator
+      description: "Example: GTX 1080 Ti, RTX 4090, A100, H100, CPU only."
+
+  - type: input
+    id: commit
+    attributes:
+      label: Git commit
+      description: Exact commit SHA used for the run.
+    validations:
+      required: true
+
+  - type: input
+    id: dataset_checksum
+    attributes:
+      label: Dataset split checksum
+      description: Checksum for the split CSV or dataset manifest used for training.
+
+  - type: textarea
+    id: command
+    attributes:
+      label: Training command
+      description: Full command from the project root.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment notes
+      description: Python, PyTorch, CUDA, container image, dependency file, or cluster module details.
+
+  - type: textarea
+    id: metrics
+    attributes:
+      label: Metrics
+      description: Accuracy, per-class precision/recall/F1/support, best epoch, and failure notes.
+
+  - type: textarea
+    id: artifacts
+    attributes:
+      label: Artifacts
+      description: Checkpoint path, log path, metrics file, and where artifacts were copied after the run.
+
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: This run uses only public/non-sensitive data allowed by the compute platform.
+          required: true
+        - label: No secrets, tokens, PHI, PII, or other regulated data are included in this issue.
+          required: true
+        - label: Reported outputs are experimental classifications, not medical claims.
+          required: true
