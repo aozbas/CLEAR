@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from PIL import Image
-from transformers import pipeline
+from transformers import AutoImageProcessor, AutoModelForImageClassification, pipeline
 
 from ml.evaluation.schema import HAM10000_LABELS, ModelMetadata, ModelPrediction, validate_label
 
@@ -31,11 +31,20 @@ class HuggingFaceImageClassifierAdapter:
         self.revision = revision
         self.label_map = label_map
         self.cache_dir = cache_dir
-        self._classifier = pipeline(
-            "image-classification",
-            model=model_id,
+        image_processor = AutoImageProcessor.from_pretrained(
+            model_id,
             revision=revision,
             cache_dir=cache_dir,
+        )
+        model = AutoModelForImageClassification.from_pretrained(
+            model_id,
+            revision=revision,
+            cache_dir=cache_dir,
+        )
+        self._classifier = pipeline(
+            "image-classification",
+            model=model,
+            image_processor=image_processor,
         )
         self.metadata = ModelMetadata(
             name=model_id,
