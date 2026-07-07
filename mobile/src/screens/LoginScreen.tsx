@@ -44,7 +44,7 @@ export default function LoginScreen() {
     >
       <View style={styles.card}>
         <Text style={styles.wordmark}>CLEAR</Text>
-        <Text style={styles.tagline}>skin lesion identification</Text>
+        <Text style={styles.tagline}>experimental skin-lesion classification</Text>
 
         <TextInput
           style={styles.input}

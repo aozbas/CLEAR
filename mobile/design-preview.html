@@ -571,7 +571,7 @@ body {
 
   <header class="header">
     <h1>CLEAR — design system</h1>
-    <p>Mobile-first design system for the skin-lesion identification app. Warm, restrained, considered — like Claude on mobile. Nine screens across three flows: core capture loop, results &amp; detail, account.</p>
+    <p>Mobile-first design system for the experimental skin-lesion classification app. Warm, restrained, considered. Nine screens across three flows: core capture loop, results &amp; detail, account.</p>
   </header>
 
   <!-- ============ Section 1: Core flow ============ -->
@@ -612,7 +612,7 @@ body {
           <div class="body login-body">
             <div class="login-hero">
               <h2 class="login-title">CLEAR</h2>
-              <p class="login-sub">skin lesion identification</p>
+              <p class="login-sub">experimental skin-lesion classification</p>
             </div>
             <input class="input" placeholder="Email" />
             <input class="input" type="password" placeholder="Password" />
@@ -684,7 +684,7 @@ body {
 
             <div style="margin-top:8px">
               <div class="kv"><span class="kv-key">Date</span><span class="kv-val">May 7, 2026 · 10:42</span></div>
-              <div class="kv"><span class="kv-key">Model</span><span class="kv-val">v1.0-binary</span></div>
+              <div class="kv"><span class="kv-key">Model</span><span class="kv-val">ham10000-resnet18</span></div>
             </div>
 
             <button class="btn btn-destructive" style="margin-top:4px">Delete scan</button>
@@ -774,26 +774,26 @@ body {
           <div class="sheet">
             <div class="sheet-handle"></div>
             <div class="sheet-head">
-              <h2>Melanoma</h2>
+              <h2>Experimental category</h2>
               <span class="sheet-close">×</span>
             </div>
-            <p class="muted">Malignant skin cancer</p>
-            <span class="severity-tag urgent">See a doctor soon</span>
+            <p class="muted">Model output, not a diagnosis</p>
+            <span class="severity-tag urgent">Discuss concerns with a clinician</span>
 
-            <p class="section-cap" style="margin-top:8px">What it is</p>
-            <p>A serious form of skin cancer that develops in pigment-producing cells. Often appears as a new dark spot or a mole that changes in shape, color, or size.</p>
+            <p class="section-cap" style="margin-top:8px">What this means</p>
+            <p>CLEAR can only summarize an experimental model pattern from one photo. It cannot determine whether a lesion is dangerous.</p>
 
-            <p class="section-cap">What you should do</p>
+            <p class="section-cap">Next steps</p>
             <ul class="action-list">
-              <li>See a dermatologist within the next few weeks</li>
-              <li>Bring this scan and any earlier photos with you</li>
-              <li>Don't wait for it to change &mdash; early detection matters most</li>
+              <li>Use this result as a note for your own records, not as medical advice</li>
+              <li>Talk to a qualified medical professional about any skin concern</li>
+              <li>Compare with earlier photos only as context for that conversation</li>
             </ul>
 
-            <p class="section-cap">Time to resolve on its own</p>
-            <p class="muted-italic">Does not resolve on its own.</p>
+            <p class="section-cap">Model limitation</p>
+            <p class="muted-italic">This preview is not clinical guidance.</p>
 
-            <button class="btn btn-secondary" style="margin-top:8px">Learn more</button>
+            <button class="btn btn-secondary" style="margin-top:8px">Close</button>
           </div>
         </div>
       </div>
@@ -832,7 +832,7 @@ body {
 
             <p class="section-cap">About</p>
             <div class="list">
-              <div class="list-row"><span>Model version</span><span class="val">v1.0-binary</span></div>
+              <div class="list-row"><span>Model version</span><span class="val">ham10000-resnet18</span></div>
               <div class="list-row"><span>View disclaimer</span><span class="chev"></span></div>
               <div class="list-row"><span>Privacy policy</span><span class="chev"></span></div>
             </div>
@@ -891,9 +891,9 @@ body {
           </div>
           <div class="body about-body">
             <h2 class="about-mark">CLEAR</h2>
-            <p class="about-tag">skin-lesion identification</p>
+            <p class="about-tag">experimental skin-lesion classification</p>
 
-            <p class="about-para">CLEAR classifies skin-lesion photos into broad categories using a small neural network. It runs on your phone, sends each scan to a private backend for prediction, and stores your scan history securely.</p>
+            <p class="about-para">CLEAR sends each scan to a private backend for one-time experimental classification. Account history stores result metadata, not uploaded photos.</p>
 
             <p class="about-para">It does not diagnose disease. It cannot replace a dermatologist. Predictions are probabilistic and routinely wrong on edge cases.</p>
 
@@ -901,7 +901,7 @@ body {
             <div class="list">
               <div class="list-row"><span>Model</span><span class="val">ResNet18</span></div>
               <div class="list-row"><span>Trained on</span><span class="val">HAM10000</span></div>
-              <div class="list-row"><span>Classes</span><span class="val">2 (binary)</span></div>
+              <div class="list-row"><span>Classes</span><span class="val">7 HAM10000</span></div>
               <div class="list-row"><span>App version</span><span class="val">0.1.0</span></div>
             </div>
 

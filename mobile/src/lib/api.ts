@@ -5,17 +5,22 @@ const BASE = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8000";
 export type PredictionResponse = {
   label: string;
   confidence: number;
-  image_url: string;
+  image_url: string | null;
   signed_image_url?: string | null;
-  scan_id: string;
+  scan_id: string | null;
+  saved: boolean;
+  should_retry: boolean;
+  message?: string | null;
+  model_version?: string | null;
 };
 
 export type Scan = {
   id: string;
-  image_url: string;
+  image_url: string | null;
   signed_image_url?: string | null;
   label: string;
   confidence: number;
+  model_version?: string | null;
   created_at: string;
 };
 
@@ -73,14 +78,26 @@ async function parseOrThrow<T>(r: Response): Promise<T> {
 }
 
 export async function predict(imageUri: string): Promise<PredictionResponse> {
+  const r = await fetchWithAuth("/predictions", {
+    method: "POST",
+    body: imageForm(imageUri),
+  });
+  return parseOrThrow<PredictionResponse>(r);
+}
+
+export async function predictDemo(imageUri: string): Promise<PredictionResponse> {
+  const r = await fetch(`${BASE}/predictions/demo`, {
+    method: "POST",
+    body: imageForm(imageUri),
+  });
+  return parseOrThrow<PredictionResponse>(r);
+}
+
+function imageForm(imageUri: string): FormData {
   const form = new FormData();
   // @ts-expect-error RN FormData file shape
   form.append("image", { uri: imageUri, name: "scan.jpg", type: "image/jpeg" });
-  const r = await fetchWithAuth("/predictions", {
-    method: "POST",
-    body: form,
-  });
-  return parseOrThrow<PredictionResponse>(r);
+  return form;
 }
 
 export async function listScans(): Promise<{ scans: Scan[] }> {

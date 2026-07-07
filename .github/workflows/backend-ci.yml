@@ -37,4 +37,4 @@ jobs:
         run: python -m ruff format --check backend
 
       - name: Test
-        run: python -m unittest backend.tests.test_storage
+        run: python -m unittest discover -s backend/tests
