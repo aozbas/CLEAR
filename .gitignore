@@ -10,7 +10,13 @@ __pycache__/
 # and define the dataset split for reproducibility.
 ml/data/raw/
 ml/data/processed/
+ml/runs/
+ml/model_cache/
 ml/models/*.pt
+ml/models/**/*.pt
+ml/models/**/*.pth
+ml/models/**/*.safetensors
+ml/models/**/*.bin
 
 # ── Environment / secrets ────────────────────────────────
 .env
