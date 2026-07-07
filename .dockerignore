@@ -21,8 +21,22 @@ supabase
 !*.env.example
 !**/.env.example
 .mcp.json
+.c*dex
 .kaggle
 kaggle.json
+*.pem
+*.key
+*.p12
+*.pfx
+*.mobileprovision
+*.keystore
+*.jks
+google-service-account*.json
+service-account*.json
+*-service-account.json
+credentials.json
+secrets.json
+.eas/credentials*
 
 ml/data/raw
 ml/data/processed

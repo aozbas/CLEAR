@@ -9,15 +9,15 @@ import {
   Text,
   View,
 } from "react-native";
-import { predict, PredictionResponse } from "../lib/api";
+import { predictDemo, PredictionResponse } from "../lib/api";
 import { displayLabel, formatConfidence, isCloserLook } from "../lib/labels";
 import { theme } from "../theme";
 
 type Props = {
-  onHistory: () => void;
+  onBack: () => void;
 };
 
-export default function ScanScreen({ onHistory }: Props) {
+export default function DemoScanScreen({ onBack }: Props) {
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [result, setResult] = useState<PredictionResponse | null>(null);
   const [busy, setBusy] = useState(false);
@@ -28,7 +28,7 @@ export default function ScanScreen({ onHistory }: Props) {
     setError(null);
     setResult(null);
     try {
-      const response = await predict(uri);
+      const response = await predictDemo(uri);
       setResult(response);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -73,13 +73,27 @@ export default function ScanScreen({ onHistory }: Props) {
     await submitImage(uri);
   }
 
+  function resetDemo() {
+    setImageUri(null);
+    setResult(null);
+    setError(null);
+  }
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.topBar}>
         <Text style={styles.wordmark}>CLEAR</Text>
-        <Pressable onPress={onHistory} style={styles.linkButton}>
-          <Text style={styles.linkLabel}>History</Text>
+        <Pressable onPress={onBack} style={styles.linkButton}>
+          <Text style={styles.linkLabel}>Back</Text>
         </Pressable>
+      </View>
+
+      <View style={styles.notice}>
+        <Text style={styles.noticeTitle}>Demo mode</Text>
+        <Text style={styles.noticeText}>
+          Your photo is sent for one-time experimental classification. CLEAR does not save the
+          photo, result, or scan history in demo mode.
+        </Text>
       </View>
 
       <View style={styles.photoFrame}>
@@ -119,10 +133,7 @@ export default function ScanScreen({ onHistory }: Props) {
             </Text>
           </View>
           <Text style={styles.savedText}>
-            {result.message ??
-              (result.saved
-                ? "Saved to history as an experimental result"
-                : "Not saved. Try another clear, well-lit image.")}
+            {result.message ?? "Demo result only. No photo or result was saved."}
           </Text>
         </View>
       ) : null}
@@ -145,6 +156,12 @@ export default function ScanScreen({ onHistory }: Props) {
         <Pressable style={styles.secondary} onPress={choosePhoto} disabled={busy}>
           <Text style={styles.secondaryLabel}>Choose from library</Text>
         </Pressable>
+
+        {imageUri || result || error ? (
+          <Pressable style={styles.secondary} onPress={resetDemo} disabled={busy}>
+            <Text style={styles.secondaryLabel}>Clear demo result</Text>
+          </Pressable>
+        ) : null}
       </View>
     </ScrollView>
   );
@@ -177,6 +194,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   linkLabel: { color: theme.colors.muted, fontSize: 15, fontWeight: "500" },
+  notice: {
+    backgroundColor: theme.colors.surface,
+    borderColor: theme.colors.line,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: theme.radii.md,
+    padding: theme.spacing.md,
+    gap: theme.spacing.xs,
+  },
+  noticeTitle: { color: theme.colors.text, fontSize: 15, fontWeight: "500" },
+  noticeText: { color: theme.colors.muted, fontSize: 14, lineHeight: 20 },
   photoFrame: {
     aspectRatio: 1,
     borderRadius: theme.radii.lg,

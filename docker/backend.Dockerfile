@@ -10,10 +10,11 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends libjpeg62-turbo libpng16-16 \
     && rm -rf /var/lib/apt/lists/*
 
-COPY docker/backend-requirements.txt /tmp/backend-requirements.txt
+COPY backend/requirements.txt /tmp/backend-requirements.txt
 RUN python -m pip install --upgrade pip \
     && python -m pip install --index-url https://download.pytorch.org/whl/cpu torch==2.11.0 torchvision==0.26.0 \
-    && python -m pip install -r /tmp/backend-requirements.txt
+    && grep -v -E '^(torch|torchvision)==' /tmp/backend-requirements.txt > /tmp/backend-runtime-requirements.txt \
+    && python -m pip install -r /tmp/backend-runtime-requirements.txt
 
 COPY backend ./backend
 COPY ml ./ml

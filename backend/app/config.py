@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     supabase_url: str
     supabase_service_role_key: str
     model_path: str = "ml/models/lesion_classifier_ham10000.pt"
+    model_version: str = "ham10000-resnet18-baseline-2026-05-18"
+    min_prediction_confidence: float = 0.60
 
     @property
     def resolved_model_path(self) -> Path:
