@@ -1,5 +1,5 @@
 [tool.ruff]
-extend-exclude = ["ml/notebooks"]
+extend-exclude = ["ml/notebooks", "ml/model_cache", "ml/runs"]
 line-length = 100
 target-version = "py313"
 
