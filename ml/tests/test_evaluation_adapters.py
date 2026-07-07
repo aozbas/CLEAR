@@ -3,8 +3,13 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
+from PIL import Image
+
 from ml.evaluation.adapters.base import LesionModelAdapter
 from ml.evaluation.adapters.baseline import BaselineAdapter
+from ml.evaluation.adapters.huggingface_image_classifier import (
+    HuggingFaceImageClassifierAdapter,
+)
 from ml.evaluation.schema import HAM10000_LABELS, ModelMetadata, ModelPrediction
 
 
@@ -24,6 +29,9 @@ class FakeAdapter:
 
 
 class EvaluationAdapterTests(unittest.TestCase):
+    def _write_image(self, path: Path) -> None:
+        Image.new("RGB", (8, 8), color=(10, 20, 30)).save(path)
+
     def test_fake_adapter_satisfies_protocol(self) -> None:
         with TemporaryDirectory() as tmp_dir:
             image_path = Path(tmp_dir) / "image.jpg"
@@ -51,6 +59,92 @@ class EvaluationAdapterTests(unittest.TestCase):
         self.assertEqual(prediction.confidence, 0.88)
         self.assertIsInstance(prediction.latency_ms, float)
         self.assertGreaterEqual(prediction.latency_ms, 0.0)
+
+    def test_huggingface_adapter_passes_model_revision_and_cache(self) -> None:
+        with TemporaryDirectory() as tmp_dir:
+            cache_dir = Path(tmp_dir) / "cache"
+
+            with patch(
+                "ml.evaluation.adapters.huggingface_image_classifier.pipeline",
+                return_value=FakeHuggingFaceClassifier(),
+            ) as pipeline:
+                HuggingFaceImageClassifierAdapter(
+                    model_id="example/model",
+                    revision="abc123",
+                    label_map={"mel": "melanoma", "nv": "nevus"},
+                    cache_dir=cache_dir,
+                )
+
+        pipeline.assert_called_once_with(
+            "image-classification",
+            model="example/model",
+            revision="abc123",
+            cache_dir=cache_dir,
+        )
+
+    def test_huggingface_adapter_maps_labels_and_records_latency(self) -> None:
+        with TemporaryDirectory() as tmp_dir:
+            image_path = Path(tmp_dir) / "image.jpg"
+            self._write_image(image_path)
+
+            with patch(
+                "ml.evaluation.adapters.huggingface_image_classifier.pipeline",
+                return_value=FakeHuggingFaceClassifier(),
+            ):
+                adapter = HuggingFaceImageClassifierAdapter(
+                    model_id="example/model",
+                    revision="abc123",
+                    label_map={"mel": "melanoma", "nv": "nevus"},
+                    cache_dir=Path(tmp_dir) / "cache",
+                )
+                prediction = adapter.predict_image(image_path)
+
+        self.assertEqual(prediction.label, "melanoma")
+        self.assertEqual(prediction.confidence, 0.9)
+        self.assertEqual(prediction.probabilities, {"melanoma": 0.9, "nevus": 0.1})
+        self.assertIsInstance(prediction.latency_ms, float)
+        self.assertGreaterEqual(prediction.latency_ms, 0.0)
+        self.assertEqual(adapter.metadata.revision, "resolved456")
+
+    def test_huggingface_adapter_rejects_unknown_candidate_labels(self) -> None:
+        with TemporaryDirectory() as tmp_dir:
+            image_path = Path(tmp_dir) / "image.jpg"
+            self._write_image(image_path)
+
+            with patch(
+                "ml.evaluation.adapters.huggingface_image_classifier.pipeline",
+                return_value=FakeHuggingFaceClassifier(outputs=[{"label": "other", "score": 1.0}]),
+            ):
+                adapter = HuggingFaceImageClassifierAdapter(
+                    model_id="example/model",
+                    revision="abc123",
+                    label_map={"mel": "melanoma"},
+                    cache_dir=Path(tmp_dir) / "cache",
+                )
+
+                with self.assertRaises(ValueError):
+                    adapter.predict_image(image_path)
+
+
+class FakeConfig:
+    _commit_hash = "resolved456"
+
+
+class FakeModel:
+    config = FakeConfig()
+
+
+class FakeHuggingFaceClassifier:
+    model = FakeModel()
+
+    def __init__(self, outputs: list[dict[str, float | str]] | None = None) -> None:
+        self.outputs = outputs or [
+            {"label": "mel", "score": 0.9},
+            {"label": "nv", "score": 0.1},
+        ]
+
+    def __call__(self, image: Image.Image, *, top_k: int | None) -> list[dict[str, float | str]]:
+        return self.outputs
 
 
 if __name__ == "__main__":
