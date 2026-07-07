@@ -146,6 +146,9 @@ function FilterChip({
 
 function HistoryRow({ scan }: { scan: Scan }) {
   const closer = isCloserLook(scan.label);
+  const meta = scan.model_version
+    ? `${formatConfidence(scan.confidence)} confidence - ${scan.model_version}`
+    : `${formatConfidence(scan.confidence)} confidence`;
 
   return (
     <View style={styles.row}>
@@ -161,7 +164,7 @@ function HistoryRow({ scan }: { scan: Scan }) {
             {tagLabel(scan.label)}
           </Text>
         </View>
-        <Text style={styles.rowMeta}>{formatConfidence(scan.confidence)} confidence</Text>
+        <Text style={styles.rowMeta}>{meta}</Text>
       </View>
 
       <Text style={styles.date}>{formatDate(scan.created_at)}</Text>

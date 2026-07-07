@@ -7,9 +7,10 @@ ENV PYTHONUNBUFFERED=1
 ENV PIP_NO_CACHE_DIR=1
 ENV PIP_BREAK_SYSTEM_PACKAGES=1
 
-COPY docker/ml-requirements.txt /tmp/ml-requirements.txt
+COPY ml/requirements.txt /tmp/ml-requirements.txt
 RUN python -m pip install --upgrade pip \
-    && python -m pip install -r /tmp/ml-requirements.txt
+    && grep -v -E '^(torch|torchvision)==' /tmp/ml-requirements.txt > /tmp/ml-runtime-requirements.txt \
+    && python -m pip install -r /tmp/ml-runtime-requirements.txt
 
 COPY ml ./ml
 

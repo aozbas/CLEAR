@@ -15,7 +15,7 @@ def list_scans(user_id: str = Depends(get_current_user_id)):
     try:
         response = (
             hosted_database.table("scans")
-            .select("id,image_url,prediction,confidence,created_at")
+            .select("id,image_url,prediction,confidence,model_version,created_at")
             .eq("user_id", user_id)
             .order("created_at", desc=True)
             .execute()
@@ -27,20 +27,23 @@ def list_scans(user_id: str = Depends(get_current_user_id)):
     scans = []
     for scan in response.data:
         signed_image_url = None
-        try:
-            signed_image_url = create_signed_image_url(scan["image_url"])
-        except Exception:
-            logger.warning("Could not sign scan image URL", exc_info=True)
-            # History can still render labels/confidence if signing one image fails.
-            pass
+        image_url = scan.get("image_url")
+        if image_url:
+            try:
+                signed_image_url = create_signed_image_url(image_url)
+            except Exception:
+                logger.warning("Could not sign scan image URL", exc_info=True)
+                # History can still render labels/confidence if signing one image fails.
+                pass
 
         scans.append(
             {
                 "id": scan["id"],
-                "image_url": scan["image_url"],
+                "image_url": image_url,
                 "signed_image_url": signed_image_url,
                 "label": scan["prediction"],
                 "confidence": scan["confidence"],
+                "model_version": scan.get("model_version"),
                 "created_at": scan["created_at"],
             }
         )

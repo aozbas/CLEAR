@@ -18,6 +18,19 @@ ml/models/*.pt
 !.env.example
 .kaggle/
 kaggle.json
+.c*dex/
+*.pem
+*.key
+*.p12
+*.pfx
+*.mobileprovision
+*.keystore
+*.jks
+google-service-account*.json
+service-account*.json
+*-service-account.json
+credentials.json
+secrets.json
 
 # ── Mobile ───────────────────────────────────────────────
 node_modules/
@@ -37,9 +50,15 @@ desktop.ini
 docs/
 AGENTS.md
 PROJECT.md
+README.md
+**/README.md
+mobile/DESIGN.md
 
 # ── MCP config (contains project ref) ───────────────────
 .mcp.json
+
+# â”€â”€ Expo/EAS credentials â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+.eas/credentials*
 
 # ── Hosted database ─────────────────────────────────────────────
 hosted_database/.temp/
