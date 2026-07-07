@@ -1,25 +1,38 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Session } from "@supabase/supabase-js";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, StatusBar, StyleSheet, View } from "react-native";
 import { supabase } from "./src/lib/supabase";
-import LoginScreen from "./src/screens/LoginScreen";
+import DemoScanScreen from "./src/screens/DemoScanScreen";
+import DisclaimerScreen from "./src/screens/DisclaimerScreen";
+import EntryScreen from "./src/screens/EntryScreen";
 import HistoryScreen from "./src/screens/HistoryScreen";
+import LoginScreen from "./src/screens/LoginScreen";
 import ScanScreen from "./src/screens/ScanScreen";
 import { theme } from "./src/theme";
 
 type AppScreen = "scan" | "history";
+type PublicScreen = "entry" | "demo" | "login";
+const DISCLAIMER_KEY = "clear.disclaimer.accepted";
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
+  const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [publicScreen, setPublicScreen] = useState<PublicScreen>("entry");
 
   useEffect(() => {
     let isMounted = true;
-    supabase.auth.getSession().then(({ data }) => {
-      if (!isMounted) return;
-      setSession(data.session);
-      setLoading(false);
-    });
+    Promise.all([supabase.auth.getSession(), AsyncStorage.getItem(DISCLAIMER_KEY)])
+      .then(([{ data }, accepted]) => {
+        if (!isMounted) return;
+        setSession(data.session);
+        setDisclaimerAccepted(accepted === "true");
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
     const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
       if (!isMounted) return;
       setSession(s);
@@ -39,10 +52,46 @@ export default function App() {
     );
   }
 
+  if (!disclaimerAccepted) {
+    return (
+      <DisclaimerScreen
+        onContinue={async () => {
+          await AsyncStorage.setItem(DISCLAIMER_KEY, "true");
+          setDisclaimerAccepted(true);
+        }}
+      />
+    );
+  }
+
+  if (!session) {
+    if (publicScreen === "demo") {
+      return (
+        <>
+          <StatusBar barStyle="dark-content" />
+          <DemoScanScreen onBack={() => setPublicScreen("entry")} />
+        </>
+      );
+    }
+
+    return (
+      <>
+        <StatusBar barStyle="dark-content" />
+        {publicScreen === "login" ? (
+          <LoginScreen />
+        ) : (
+          <EntryScreen
+            onDemo={() => setPublicScreen("demo")}
+            onSignIn={() => setPublicScreen("login")}
+          />
+        )}
+      </>
+    );
+  }
+
   return (
     <>
       <StatusBar barStyle="dark-content" />
-      {session ? <Home email={session.user.email ?? "(no email)"} /> : <LoginScreen />}
+      <Home email={session.user.email ?? "(no email)"} />
     </>
   );
 }
