@@ -8,7 +8,7 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
-from huggingface_hub import HfApi
+from huggingface_hub import HfApi, hf_hub_download
 
 from ml.evaluation.adapters.baseline import BaselineAdapter
 from ml.evaluation.adapters.huggingface_image_classifier import (
@@ -132,6 +132,7 @@ def _inspect_model(model_id: str, output_dir: Path) -> None:
     info = HfApi().model_info(model_id, files_metadata=True)
     card_data = getattr(info, "card_data", None)
     config = getattr(info, "config", None) or {}
+    config_labels = config.get("id2label") or _download_config_labels(model_id, info)
     inspection = {
         "model_id": info.id,
         "revision": info.sha,
@@ -142,7 +143,7 @@ def _inspect_model(model_id: str, output_dir: Path) -> None:
         "license_link": _card_value(card_data, "license_link"),
         "datasets": _card_value(card_data, "datasets"),
         "tags": info.tags,
-        "config_labels": config.get("id2label") or {},
+        "config_labels": config_labels,
         "files": [
             {
                 "name": sibling.rfilename,
@@ -168,6 +169,26 @@ def _card_value(card_data: object, name: str) -> object:
     if card_data is None:
         return None
     return getattr(card_data, name, None)
+
+
+def _download_config_labels(model_id: str, info: object) -> dict[str, str]:
+    has_config = any(sibling.rfilename == "config.json" for sibling in info.siblings)
+    if not has_config:
+        return {}
+
+    try:
+        config_path = hf_hub_download(
+            repo_id=model_id,
+            filename="config.json",
+            revision=info.sha,
+            cache_dir=DEFAULT_CACHE_DIR,
+        )
+        config = json.loads(Path(config_path).read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+    labels = config.get("id2label") or {}
+    return {str(key): str(value) for key, value in labels.items()}
 
 
 def _inspection_summary_markdown(inspection: dict[str, object]) -> str:

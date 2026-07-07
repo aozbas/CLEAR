@@ -63,11 +63,25 @@ class EvaluationAdapterTests(unittest.TestCase):
     def test_huggingface_adapter_passes_model_revision_and_cache(self) -> None:
         with TemporaryDirectory() as tmp_dir:
             cache_dir = Path(tmp_dir) / "cache"
+            processor = object()
+            model = FakeModel()
 
-            with patch(
-                "ml.evaluation.adapters.huggingface_image_classifier.pipeline",
-                return_value=FakeHuggingFaceClassifier(),
-            ) as pipeline:
+            with (
+                patch(
+                    "ml.evaluation.adapters.huggingface_image_classifier.AutoImageProcessor"
+                    ".from_pretrained",
+                    return_value=processor,
+                ) as load_processor,
+                patch(
+                    "ml.evaluation.adapters.huggingface_image_classifier."
+                    "AutoModelForImageClassification.from_pretrained",
+                    return_value=model,
+                ) as load_model,
+                patch(
+                    "ml.evaluation.adapters.huggingface_image_classifier.pipeline",
+                    return_value=FakeHuggingFaceClassifier(),
+                ) as pipeline,
+            ):
                 HuggingFaceImageClassifierAdapter(
                     model_id="example/model",
                     revision="abc123",
@@ -75,11 +89,20 @@ class EvaluationAdapterTests(unittest.TestCase):
                     cache_dir=cache_dir,
                 )
 
-        pipeline.assert_called_once_with(
-            "image-classification",
-            model="example/model",
+        load_processor.assert_called_once_with(
+            "example/model",
             revision="abc123",
             cache_dir=cache_dir,
+        )
+        load_model.assert_called_once_with(
+            "example/model",
+            revision="abc123",
+            cache_dir=cache_dir,
+        )
+        pipeline.assert_called_once_with(
+            "image-classification",
+            model=model,
+            image_processor=processor,
         )
 
     def test_huggingface_adapter_maps_labels_and_records_latency(self) -> None:
@@ -87,9 +110,21 @@ class EvaluationAdapterTests(unittest.TestCase):
             image_path = Path(tmp_dir) / "image.jpg"
             self._write_image(image_path)
 
-            with patch(
-                "ml.evaluation.adapters.huggingface_image_classifier.pipeline",
-                return_value=FakeHuggingFaceClassifier(),
+            with (
+                patch(
+                    "ml.evaluation.adapters.huggingface_image_classifier.AutoImageProcessor"
+                    ".from_pretrained",
+                    return_value=object(),
+                ),
+                patch(
+                    "ml.evaluation.adapters.huggingface_image_classifier."
+                    "AutoModelForImageClassification.from_pretrained",
+                    return_value=FakeModel(),
+                ),
+                patch(
+                    "ml.evaluation.adapters.huggingface_image_classifier.pipeline",
+                    return_value=FakeHuggingFaceClassifier(),
+                ),
             ):
                 adapter = HuggingFaceImageClassifierAdapter(
                     model_id="example/model",
@@ -111,9 +146,21 @@ class EvaluationAdapterTests(unittest.TestCase):
             image_path = Path(tmp_dir) / "image.jpg"
             self._write_image(image_path)
 
-            with patch(
-                "ml.evaluation.adapters.huggingface_image_classifier.pipeline",
-                return_value=FakeHuggingFaceClassifier(outputs=[{"label": "other", "score": 1.0}]),
+            with (
+                patch(
+                    "ml.evaluation.adapters.huggingface_image_classifier.AutoImageProcessor"
+                    ".from_pretrained",
+                    return_value=object(),
+                ),
+                patch(
+                    "ml.evaluation.adapters.huggingface_image_classifier."
+                    "AutoModelForImageClassification.from_pretrained",
+                    return_value=FakeModel(),
+                ),
+                patch(
+                    "ml.evaluation.adapters.huggingface_image_classifier.pipeline",
+                    return_value=FakeHuggingFaceClassifier(outputs=[{"label": "other", "score": 1.0}]),
+                ),
             ):
                 adapter = HuggingFaceImageClassifierAdapter(
                     model_id="example/model",

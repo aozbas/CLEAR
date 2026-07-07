@@ -159,6 +159,34 @@ class EvaluationCliTests(unittest.TestCase):
         self.assertEqual(inspection["config_labels"], {"0": "melanoma"})
         self.assertIn("experimental classification", summary)
 
+    def test_inspect_model_reads_config_file_when_api_omits_labels(self) -> None:
+        with TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            output_dir = root / "inspect"
+            config_path = root / "config.json"
+            config_path.write_text(
+                json.dumps({"id2label": {"0": "nevus"}}),
+                encoding="utf-8",
+            )
+
+            with (
+                patch("ml.evaluation.cli.HfApi", return_value=FakeHfApiNoLabels()),
+                patch("ml.evaluation.cli.hf_hub_download", return_value=str(config_path)),
+            ):
+                exit_code = main(
+                    [
+                        "--inspect-model",
+                        "example/model",
+                        "--out",
+                        str(output_dir),
+                    ]
+                )
+
+            inspection = json.loads((output_dir / "inspection.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(inspection["config_labels"], {"0": "nevus"})
+
 
 class FakeCardData:
     license = "mit"
@@ -184,11 +212,22 @@ class FakeModelInfo:
     siblings = [FakeSibling("config.json", 100)]
 
 
+class FakeModelInfoNoLabels(FakeModelInfo):
+    config = {}
+
+
 class FakeHfApi:
     def model_info(self, repo_id: str, *, files_metadata: bool) -> FakeModelInfo:
         self.repo_id = repo_id
         self.files_metadata = files_metadata
         return FakeModelInfo()
+
+
+class FakeHfApiNoLabels:
+    def model_info(self, repo_id: str, *, files_metadata: bool) -> FakeModelInfoNoLabels:
+        self.repo_id = repo_id
+        self.files_metadata = files_metadata
+        return FakeModelInfoNoLabels()
 
 
 if __name__ == "__main__":
