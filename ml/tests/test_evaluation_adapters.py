@@ -159,7 +159,9 @@ class EvaluationAdapterTests(unittest.TestCase):
                 ),
                 patch(
                     "ml.evaluation.adapters.huggingface_image_classifier.pipeline",
-                    return_value=FakeHuggingFaceClassifier(outputs=[{"label": "other", "score": 1.0}]),
+                    return_value=FakeHuggingFaceClassifier(
+                        outputs=[{"label": "other", "score": 1.0}]
+                    ),
                 ),
             ):
                 adapter = HuggingFaceImageClassifierAdapter(

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from ml.evaluation.schema import HAM10000_LABELS, EvaluationExample, VALID_SPLITS
+from ml.evaluation.schema import HAM10000_LABELS, VALID_SPLITS, EvaluationExample
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 REQUIRED_COLUMNS = {"split", "image_path", "label"}
@@ -52,9 +52,7 @@ def load_examples(
         examples.append(EvaluationExample(image_path=image_path, label=label, split=row_split))
 
     if samples_per_label is not None:
-        by_label: dict[str, list[EvaluationExample]] = {
-            label: [] for label in HAM10000_LABELS
-        }
+        by_label: dict[str, list[EvaluationExample]] = {label: [] for label in HAM10000_LABELS}
         for example in examples:
             by_label[example.label].append(example)
 

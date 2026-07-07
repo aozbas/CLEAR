@@ -13,4 +13,3 @@ class LesionModelAdapter(Protocol):
 
     def predict_image(self, image_path: Path) -> ModelPrediction:
         """Run one image through a model and return a canonical prediction."""
-

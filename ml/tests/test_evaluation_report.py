@@ -5,7 +5,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from ml.evaluation.report import write_report
-from ml.evaluation.schema import EvaluationExample, HAM10000_LABELS, ModelMetadata, ModelPrediction
+from ml.evaluation.schema import HAM10000_LABELS, EvaluationExample, ModelMetadata, ModelPrediction
 
 
 class EvaluationReportTests(unittest.TestCase):

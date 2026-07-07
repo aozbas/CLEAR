@@ -94,7 +94,8 @@ def _summary_markdown(
         [
             f"# Evaluation Summary: {model_metadata.name}",
             "",
-            "This report records experimental classification metrics only. It is not a medical diagnosis.",
+            "This report records experimental classification metrics only. "
+            "It is not a medical diagnosis.",
             "",
             f"Samples evaluated: {sample_count}",
             "",
