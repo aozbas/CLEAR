@@ -109,9 +109,7 @@ def _build_adapter(
             cache_dir=cache_dir,
             license_name=candidate.license,
         )
-    raise ValueError(
-        f"Unsupported model: {model_name} has no runnable evaluation adapter."
-    )
+    raise ValueError(f"Unsupported model: {model_name} has no runnable evaluation adapter.")
 
 
 def _latency_metrics(predictions: Sequence[ModelPrediction]) -> dict[str, float]:

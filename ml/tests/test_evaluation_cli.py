@@ -7,7 +7,7 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from ml.evaluation.cli import main
-from ml.evaluation.schema import EvaluationExample, HAM10000_LABELS, ModelMetadata, ModelPrediction
+from ml.evaluation.schema import HAM10000_LABELS, EvaluationExample, ModelMetadata, ModelPrediction
 
 
 class FakeAdapter:

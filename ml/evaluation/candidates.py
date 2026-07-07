@@ -64,8 +64,7 @@ CANDIDATES: dict[str, CandidateModel] = {
     "gianlab/swin-tiny-patch4-window7-224-finetuned-skin-cancer": CandidateModel(
         name="gianlab/swin-tiny-patch4-window7-224-finetuned-skin-cancer",
         source_url=(
-            "https://huggingface.co/gianlab/"
-            "swin-tiny-patch4-window7-224-finetuned-skin-cancer"
+            "https://huggingface.co/gianlab/swin-tiny-patch4-window7-224-finetuned-skin-cancer"
         ),
         adapter_type="huggingface_image_classifier",
         label_strategy="Transformers id2label maps cleanly to CLEAR HAM10000 labels",
@@ -99,8 +98,7 @@ CANDIDATES: dict[str, CandidateModel] = {
     "microsoft/BiomedCLIP-PubMedBERT_256-vit_base_patch16_224": CandidateModel(
         name="microsoft/BiomedCLIP-PubMedBERT_256-vit_base_patch16_224",
         source_url=(
-            "https://huggingface.co/microsoft/"
-            "BiomedCLIP-PubMedBERT_256-vit_base_patch16_224"
+            "https://huggingface.co/microsoft/BiomedCLIP-PubMedBERT_256-vit_base_patch16_224"
         ),
         adapter_type="zero_shot",
         label_strategy="canonical-label prompts if dependency footprint is acceptable",

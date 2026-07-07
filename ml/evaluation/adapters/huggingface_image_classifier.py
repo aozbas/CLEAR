@@ -97,9 +97,7 @@ class HuggingFaceImageClassifierAdapter:
         for item in outputs:
             raw_label = str(item["label"])
             if raw_label not in self.label_map:
-                raise ValueError(
-                    f"Model {self.model_id} returned unmapped label: {raw_label}"
-                )
+                raise ValueError(f"Model {self.model_id} returned unmapped label: {raw_label}")
             canonical_label = self.label_map[raw_label]
             score = float(item["score"])
             probabilities[canonical_label] = probabilities.get(canonical_label, 0.0) + score
