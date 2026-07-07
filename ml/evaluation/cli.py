@@ -3,11 +3,18 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from collections.abc import Sequence
 from pathlib import Path
 
+from huggingface_hub import HfApi
+
 from ml.evaluation.adapters.baseline import BaselineAdapter
+from ml.evaluation.adapters.huggingface_image_classifier import (
+    HuggingFaceImageClassifierAdapter,
+)
+from ml.evaluation.candidates import get_candidate
 from ml.evaluation.dataset import load_examples
 from ml.evaluation.metrics import summarize_metrics
 from ml.evaluation.report import write_report
@@ -15,6 +22,7 @@ from ml.evaluation.schema import ModelPrediction
 
 DEFAULT_SPLIT_CSV = Path("ml/data/splits/ham10000.csv")
 DEFAULT_OUTPUT_DIR = Path("ml/runs/evaluation/baseline-test")
+DEFAULT_CACHE_DIR = Path("ml/model_cache/huggingface")
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -24,8 +32,22 @@ def main(argv: Sequence[str] | None = None) -> int:
     except SystemExit as exc:
         return int(exc.code)
 
+    if args.inspect_model is not None:
+        _inspect_model(args.inspect_model, args.out)
+        print(f"Wrote model inspection report to {args.out}")
+        return 0
+
+    if args.model is None:
+        parser.print_usage(sys.stderr)
+        print("error: --model is required unless --inspect-model is used", file=sys.stderr)
+        return 2
+
     try:
-        adapter = _build_adapter(args.model, model_path=args.model_path)
+        adapter = _build_adapter(
+            args.model,
+            model_path=args.model_path,
+            cache_dir=args.cache_dir,
+        )
     except ValueError as exc:
         print(str(exc), file=sys.stderr)
         return 2
@@ -58,20 +80,38 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--inspect-model", default=None)
     parser.add_argument("--split-csv", type=Path, default=DEFAULT_SPLIT_CSV)
     parser.add_argument("--split", choices=["train", "val", "test"], default="test")
-    parser.add_argument("--model", required=True)
+    parser.add_argument("--model", default=None)
     parser.add_argument("--out", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--max-samples", type=int, default=None)
     parser.add_argument("--samples-per-label", type=int, default=None)
     parser.add_argument("--model-path", type=Path, default=None)
+    parser.add_argument("--cache-dir", type=Path, default=DEFAULT_CACHE_DIR)
     return parser
 
 
-def _build_adapter(model_name: str, *, model_path: Path | None) -> BaselineAdapter:
+def _build_adapter(
+    model_name: str,
+    *,
+    model_path: Path | None,
+    cache_dir: Path,
+) -> BaselineAdapter | HuggingFaceImageClassifierAdapter:
+    candidate = get_candidate(model_name)
     if model_name == "baseline":
         return BaselineAdapter(model_path=model_path)
-    raise ValueError(f"Unsupported model: {model_name}")
+    if candidate.adapter_type == "huggingface_image_classifier":
+        return HuggingFaceImageClassifierAdapter(
+            model_id=candidate.name,
+            revision=candidate.revision,
+            label_map=candidate.label_map,
+            cache_dir=cache_dir,
+            license_name=candidate.license,
+        )
+    raise ValueError(
+        f"Unsupported model: {model_name} has no runnable evaluation adapter."
+    )
 
 
 def _latency_metrics(predictions: Sequence[ModelPrediction]) -> dict[str, float]:
@@ -86,6 +126,65 @@ def _latency_metrics(predictions: Sequence[ModelPrediction]) -> dict[str, float]
         "latency_mean_ms": sum(latencies) / len(latencies),
         "latency_p95_ms": latencies[p95_index],
     }
+
+
+def _inspect_model(model_id: str, output_dir: Path) -> None:
+    info = HfApi().model_info(model_id, files_metadata=True)
+    card_data = getattr(info, "card_data", None)
+    config = getattr(info, "config", None) or {}
+    inspection = {
+        "model_id": info.id,
+        "revision": info.sha,
+        "pipeline_tag": info.pipeline_tag,
+        "library_name": info.library_name,
+        "license": _card_value(card_data, "license"),
+        "license_name": _card_value(card_data, "license_name"),
+        "license_link": _card_value(card_data, "license_link"),
+        "datasets": _card_value(card_data, "datasets"),
+        "tags": info.tags,
+        "config_labels": config.get("id2label") or {},
+        "files": [
+            {
+                "name": sibling.rfilename,
+                "size": getattr(sibling, "size", None),
+            }
+            for sibling in info.siblings
+        ],
+    }
+
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / "inspection.json").write_text(
+        json.dumps(inspection, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+    (output_dir / "summary.md").write_text(
+        _inspection_summary_markdown(inspection),
+        encoding="utf-8",
+    )
+
+
+def _card_value(card_data: object, name: str) -> object:
+    if card_data is None:
+        return None
+    return getattr(card_data, name, None)
+
+
+def _inspection_summary_markdown(inspection: dict[str, object]) -> str:
+    return "\n".join(
+        [
+            f"# Model Inspection: {inspection['model_id']}",
+            "",
+            "This inspection is for experimental classification evaluation only.",
+            "",
+            f"- Revision: {inspection['revision']}",
+            f"- Library: {inspection['library_name']}",
+            f"- Pipeline: {inspection['pipeline_tag']}",
+            f"- License: {inspection['license']}",
+            f"- Labels: {inspection['config_labels']}",
+            "",
+        ]
+    )
 
 
 if __name__ == "__main__":
