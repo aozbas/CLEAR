@@ -60,6 +60,10 @@ def summarize_metrics(truth: Sequence[str], predictions: Sequence[str]) -> dict[
     precision_values = [per_class[label]["precision"] for label in HAM10000_LABELS]
     recall_values = [per_class[label]["recall"] for label in HAM10000_LABELS]
     f1_values = [per_class[label]["f1"] for label in HAM10000_LABELS]
+    covered_labels = [label for label in HAM10000_LABELS if int(per_class[label]["support"]) > 0]
+    covered_precision_values = [per_class[label]["precision"] for label in covered_labels]
+    covered_recall_values = [per_class[label]["recall"] for label in covered_labels]
+    covered_f1_values = [per_class[label]["f1"] for label in covered_labels]
 
     return {
         "accuracy": _safe_divide(correct, total),
@@ -67,7 +71,25 @@ def summarize_metrics(truth: Sequence[str], predictions: Sequence[str]) -> dict[
         "macro_precision": sum(precision_values) / len(precision_values),
         "macro_recall": sum(recall_values) / len(recall_values),
         "macro_f1": sum(f1_values) / len(f1_values),
+        "covered_labels": covered_labels,
+        "covered_label_balanced_accuracy": _safe_mean(covered_recall_values),
+        "covered_label_macro_precision": _safe_mean(covered_precision_values),
+        "covered_label_macro_recall": _safe_mean(covered_recall_values),
+        "covered_label_macro_f1": _safe_mean(covered_f1_values),
+        "prediction_distribution": {
+            label: {
+                "count": int(per_class[label]["predicted"]),
+                "fraction": _safe_divide(float(per_class[label]["predicted"]), total),
+            }
+            for label in HAM10000_LABELS
+        },
         "per_class": per_class,
         "confusion_matrix": confusion,
         "labels": list(HAM10000_LABELS),
     }
+
+
+def _safe_mean(values: Sequence[float | int]) -> float:
+    if not values:
+        return 0.0
+    return float(sum(values)) / len(values)
