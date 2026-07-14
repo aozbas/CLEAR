@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ml.evaluation.schema import HAM10000_LABELS, validate_label
+from ml.evaluation.schema import HAM10000_LABELS, PAD_UFES_NATIVE_LABELS, validate_label
 
 
 @dataclass(frozen=True)
@@ -88,6 +88,21 @@ DATASET_SOURCES: dict[str, DatasetSource] = {
             "Clinical images collected with smartphone devices.",
             "Only CLEAR current-label overlap rows are included.",
             "SCC, Bowen's disease, and separate seborrheic keratosis are deferred.",
+        ],
+    ),
+    "pad_ufes_native": DatasetSource(
+        key="pad_ufes_native",
+        name="PAD-UFES-20 clinical smartphone native six-class split",
+        source_url="https://data.mendeley.com/datasets/zr7vgbcyr2/1",
+        split_type="clinical_phone_native",
+        labels=list(PAD_UFES_NATIVE_LABELS),
+        partial_label_set=False,
+        known_training_datasets=["PAD-UFES-20"],
+        notes=[
+            "Clinical images collected with smartphone devices.",
+            "Uses PAD-UFES native diagnostic classes retained for the phone-photo-first demo.",
+            "BOD/BOW rows remain deferred because they are not present as native PAD-UFES "
+            "labels in the current six-class target.",
         ],
     ),
     "scin_user_submitted": DatasetSource(

@@ -14,12 +14,33 @@ HAM10000_LABELS = (
     "dermatofibroma",
     "vascular_lesion",
 )
+PAD_UFES_NATIVE_LABELS = (
+    "actinic_keratosis",
+    "basal_cell_carcinoma",
+    "melanoma",
+    "nevus",
+    "squamous_cell_carcinoma",
+    "seborrheic_keratosis",
+)
+LABEL_SETS = {
+    "ham10000": HAM10000_LABELS,
+    "pad_ufes_native": PAD_UFES_NATIVE_LABELS,
+}
+KNOWN_LABELS = tuple(dict.fromkeys((*HAM10000_LABELS, *PAD_UFES_NATIVE_LABELS)))
 VALID_SPLITS = ("train", "val", "test")
 
 
-def validate_label(label: str) -> None:
-    if label not in HAM10000_LABELS:
-        raise ValueError(f"Unknown HAM10000 label: {label}")
+def labels_for_set(name: str) -> tuple[str, ...]:
+    try:
+        return LABEL_SETS[name]
+    except KeyError as exc:
+        raise ValueError(f"Unknown label set: {name}") from exc
+
+
+def validate_label(label: str, *, labels: tuple[str, ...] | None = None) -> None:
+    allowed_labels = labels or KNOWN_LABELS
+    if label not in allowed_labels:
+        raise ValueError(f"Unknown label: {label}")
 
 
 def validate_probability(value: float, *, field_name: str) -> None:
@@ -32,9 +53,10 @@ class EvaluationExample:
     image_path: Path
     label: str
     split: str
+    labels: tuple[str, ...] = KNOWN_LABELS
 
     def __post_init__(self) -> None:
-        validate_label(self.label)
+        validate_label(self.label, labels=self.labels)
         if self.split not in VALID_SPLITS:
             raise ValueError(f"Unknown split: {self.split}")
 
@@ -45,14 +67,15 @@ class ModelPrediction:
     confidence: float
     probabilities: dict[str, float] | None = None
     latency_ms: float | None = None
+    labels: tuple[str, ...] = KNOWN_LABELS
 
     def __post_init__(self) -> None:
-        validate_label(self.label)
+        validate_label(self.label, labels=self.labels)
         validate_probability(self.confidence, field_name="confidence")
 
         if self.probabilities is not None:
             for label, probability in self.probabilities.items():
-                validate_label(label)
+                validate_label(label, labels=self.labels)
                 validate_probability(probability, field_name=f"probability for {label}")
 
         if self.latency_ms is not None and self.latency_ms < 0:

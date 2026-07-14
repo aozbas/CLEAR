@@ -7,7 +7,13 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from ml.evaluation.cli import main
-from ml.evaluation.schema import HAM10000_LABELS, EvaluationExample, ModelMetadata, ModelPrediction
+from ml.evaluation.schema import (
+    HAM10000_LABELS,
+    PAD_UFES_NATIVE_LABELS,
+    EvaluationExample,
+    ModelMetadata,
+    ModelPrediction,
+)
 
 
 class FakeAdapter:
@@ -67,9 +73,10 @@ class EvaluationCliTests(unittest.TestCase):
             "test",
             max_samples=2,
             samples_per_label=None,
+            labels=HAM10000_LABELS,
         )
         baseline.assert_called_once_with(model_path=None)
-        summarize.assert_called_once_with(["nevus"], ["nevus"])
+        summarize.assert_called_once_with(["nevus"], ["nevus"], labels=HAM10000_LABELS)
         write_report.assert_called_once()
         _, report_kwargs = write_report.call_args
         self.assertEqual(report_kwargs["dataset_metadata"]["key"], "ham10000_internal")
@@ -217,6 +224,7 @@ class EvaluationCliTests(unittest.TestCase):
         self.assertEqual(kwargs["model_id"], "redlessone/DermLIP_ViT-B-16")
         self.assertEqual(kwargs["revision"], "main")
         self.assertEqual(kwargs["cache_dir"], Path("ml/model_cache/huggingface"))
+        self.assertEqual(kwargs["labels"], HAM10000_LABELS)
 
     def test_transformers_zero_shot_candidate_uses_registry_metadata(self) -> None:
         with TemporaryDirectory() as tmp_dir:
@@ -257,6 +265,59 @@ class EvaluationCliTests(unittest.TestCase):
         self.assertEqual(kwargs["model_id"], "google/medsiglip-448")
         self.assertEqual(kwargs["revision"], "9cea28a1a1195f665105faa6e8544c112fd960a4")
         self.assertEqual(kwargs["cache_dir"], Path("ml/model_cache/huggingface"))
+        self.assertEqual(kwargs["labels"], HAM10000_LABELS)
+
+    def test_native_pad_ufes_source_passes_native_labels_to_zero_shot_candidate(self) -> None:
+        with TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            image_path = root / "image.jpg"
+            image_path.write_bytes(b"image")
+            examples = [
+                EvaluationExample(
+                    image_path=image_path,
+                    label="squamous_cell_carcinoma",
+                    split="test",
+                    labels=PAD_UFES_NATIVE_LABELS,
+                ),
+            ]
+
+            with (
+                patch("ml.evaluation.cli.load_examples", return_value=examples) as load_examples,
+                patch(
+                    "ml.evaluation.cli.OpenClipZeroShotAdapter",
+                    return_value=FakeAdapter(),
+                ) as adapter,
+                patch(
+                    "ml.evaluation.cli.summarize_metrics",
+                    return_value={"accuracy": 1.0, "balanced_accuracy": 1.0, "macro_f1": 1.0},
+                ) as summarize,
+                patch("ml.evaluation.cli.write_report"),
+            ):
+                exit_code = main(
+                    [
+                        "--split-csv",
+                        str(root / "split.csv"),
+                        "--split",
+                        "test",
+                        "--dataset-source",
+                        "pad_ufes_native",
+                        "--model",
+                        "redlessone/DermLIP_ViT-B-16",
+                        "--out",
+                        str(root / "out"),
+                    ]
+                )
+
+        self.assertEqual(exit_code, 0)
+        _, adapter_kwargs = adapter.call_args
+        self.assertEqual(adapter_kwargs["labels"], PAD_UFES_NATIVE_LABELS)
+        _, load_kwargs = load_examples.call_args
+        self.assertEqual(load_kwargs["labels"], PAD_UFES_NATIVE_LABELS)
+        summarize.assert_called_once_with(
+            ["squamous_cell_carcinoma"],
+            ["nevus"],
+            labels=PAD_UFES_NATIVE_LABELS,
+        )
 
     def test_embedding_probe_candidate_requires_probe_workflow(self) -> None:
         with TemporaryDirectory() as tmp_dir:

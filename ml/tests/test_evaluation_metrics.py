@@ -1,7 +1,7 @@
 import unittest
 
 from ml.evaluation.metrics import confusion_matrix, per_class_metrics, summarize_metrics
-from ml.evaluation.schema import HAM10000_LABELS
+from ml.evaluation.schema import HAM10000_LABELS, PAD_UFES_NATIVE_LABELS
 
 
 class EvaluationMetricsTests(unittest.TestCase):
@@ -91,6 +91,24 @@ class EvaluationMetricsTests(unittest.TestCase):
             {"count": 1, "fraction": 0.25},
         )
         self.assertEqual(distribution["vascular_lesion"], {"count": 0, "fraction": 0.0})
+
+    def test_summary_accepts_pad_ufes_native_label_set(self) -> None:
+        summary = summarize_metrics(
+            ["squamous_cell_carcinoma", "seborrheic_keratosis", "melanoma"],
+            ["squamous_cell_carcinoma", "melanoma", "melanoma"],
+            labels=PAD_UFES_NATIVE_LABELS,
+        )
+
+        self.assertEqual(summary["labels"], list(PAD_UFES_NATIVE_LABELS))
+        self.assertEqual(
+            summary["covered_labels"],
+            ["melanoma", "squamous_cell_carcinoma", "seborrheic_keratosis"],
+        )
+        self.assertEqual(
+            set(summary["prediction_distribution"]),
+            set(PAD_UFES_NATIVE_LABELS),
+        )
+        self.assertEqual(summary["per_class"]["squamous_cell_carcinoma"]["true_positive"], 1)
 
     def test_rejects_mismatched_lengths(self) -> None:
         with self.assertRaises(ValueError):

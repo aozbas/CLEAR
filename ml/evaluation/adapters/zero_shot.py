@@ -20,6 +20,8 @@ LABEL_PROMPTS = {
     "benign_keratosis": "a clinical skin lesion image of benign keratosis",
     "dermatofibroma": "a clinical skin lesion image of dermatofibroma",
     "vascular_lesion": "a clinical skin lesion image of a vascular lesion",
+    "squamous_cell_carcinoma": "a clinical skin lesion image of squamous cell carcinoma",
+    "seborrheic_keratosis": "a clinical skin lesion image of seborrheic keratosis",
 }
 
 
@@ -34,10 +36,12 @@ class OpenClipZeroShotAdapter:
         open_clip_module: Any | None = None,
         torch_module: Any | None = None,
         device: str | None = None,
+        labels: tuple[str, ...] = HAM10000_LABELS,
     ) -> None:
         self.model_id = model_id
         self.revision = revision
         self.cache_dir = cache_dir
+        self._labels = labels
         self._torch = torch_module or _import_optional("torch", "torch")
         self._open_clip = open_clip_module or _import_optional("open_clip", "open_clip_torch")
         self.device = device or ("cuda" if self._torch.cuda.is_available() else "cpu")
@@ -51,14 +55,14 @@ class OpenClipZeroShotAdapter:
         self._model.eval()
         self._preprocess = preprocess
         self._tokenizer = self._open_clip.get_tokenizer(hub_model_id)
-        self._prompts = _canonical_prompts()
+        self._prompts = _canonical_prompts(self._labels)
         self.metadata = ModelMetadata(
             name=model_id,
             source=f"https://huggingface.co/{model_id}",
             adapter="open_clip_zero_shot",
             revision=revision,
             license=license_name,
-            labels=list(HAM10000_LABELS),
+            labels=list(self._labels),
             notes=["OpenCLIP zero-shot adapter used for experimental classification."],
         )
 
@@ -76,7 +80,7 @@ class OpenClipZeroShotAdapter:
                 scores = (100.0 * image_features @ text_features.T).softmax(dim=-1)
             latency_ms = (time.perf_counter() - started) * 1000
 
-        return _prediction_from_scores(scores[0], latency_ms=latency_ms)
+        return _prediction_from_scores(scores[0], labels=self._labels, latency_ms=latency_ms)
 
     def _move_to_device(self, value: Any) -> Any:
         return value.to(self.device) if hasattr(value, "to") else value
@@ -94,10 +98,12 @@ class TransformersZeroShotAdapter:
         model_loader: Callable[..., Any] | None = None,
         torch_module: Any | None = None,
         device: str | None = None,
+        labels: tuple[str, ...] = HAM10000_LABELS,
     ) -> None:
         self.model_id = model_id
         self.revision = revision
         self.cache_dir = cache_dir
+        self._labels = labels
         self._torch = torch_module or _import_optional("torch", "torch")
         self.device = device or ("cuda" if self._torch.cuda.is_available() else "cpu")
         processor_loader = processor_loader or _transformers_processor_loader()
@@ -113,14 +119,14 @@ class TransformersZeroShotAdapter:
             cache_dir=cache_dir,
         ).to(self.device)
         self._model.eval()
-        self._prompts = _canonical_prompts()
+        self._prompts = _canonical_prompts(self._labels)
         self.metadata = ModelMetadata(
             name=model_id,
             source=f"https://huggingface.co/{model_id}",
             adapter="transformers_zero_shot",
             revision=revision,
             license=license_name,
-            labels=list(HAM10000_LABELS),
+            labels=list(self._labels),
             notes=["Transformers zero-shot adapter used for experimental classification."],
         )
 
@@ -143,19 +149,24 @@ class TransformersZeroShotAdapter:
                 scores = self._torch.softmax(logits, dim=-1)
             latency_ms = (time.perf_counter() - started) * 1000
 
-        return _prediction_from_scores(scores[0], latency_ms=latency_ms)
+        return _prediction_from_scores(scores[0], labels=self._labels, latency_ms=latency_ms)
 
     def _move_to_device(self, value: Any) -> Any:
         return value.to(self.device) if hasattr(value, "to") else value
 
 
-def _canonical_prompts() -> list[str]:
-    return [LABEL_PROMPTS[label] for label in HAM10000_LABELS]
+def _canonical_prompts(labels: tuple[str, ...]) -> list[str]:
+    return [LABEL_PROMPTS[label] for label in labels]
 
 
-def _prediction_from_scores(scores: Any, *, latency_ms: float) -> ModelPrediction:
+def _prediction_from_scores(
+    scores: Any,
+    *,
+    labels: tuple[str, ...],
+    latency_ms: float,
+) -> ModelPrediction:
     probabilities = {
-        label: float(scores[index].detach().cpu()) for index, label in enumerate(HAM10000_LABELS)
+        label: float(scores[index].detach().cpu()) for index, label in enumerate(labels)
     }
     label, confidence = max(probabilities.items(), key=lambda item: item[1])
     return ModelPrediction(
@@ -163,6 +174,7 @@ def _prediction_from_scores(scores: Any, *, latency_ms: float) -> ModelPredictio
         confidence=confidence,
         probabilities=probabilities,
         latency_ms=latency_ms,
+        labels=labels,
     )
 
 

@@ -38,6 +38,7 @@ class EvaluationDatasetSourceTests(unittest.TestCase):
 
     def test_registry_includes_phone_clinical_sources(self) -> None:
         pad_ufes = get_dataset_source("pad_ufes_clinical")
+        pad_ufes_native = get_dataset_source("pad_ufes_native")
         scin = get_dataset_source("scin_user_submitted")
         ddi = get_dataset_source("ddi_clinical")
 
@@ -47,6 +48,19 @@ class EvaluationDatasetSourceTests(unittest.TestCase):
             ["melanoma", "nevus", "basal_cell_carcinoma", "actinic_keratosis"],
         )
         self.assertTrue(pad_ufes.partial_label_set)
+        self.assertEqual(pad_ufes_native.split_type, "clinical_phone_native")
+        self.assertEqual(
+            pad_ufes_native.labels,
+            [
+                "actinic_keratosis",
+                "basal_cell_carcinoma",
+                "melanoma",
+                "nevus",
+                "squamous_cell_carcinoma",
+                "seborrheic_keratosis",
+            ],
+        )
+        self.assertFalse(pad_ufes_native.partial_label_set)
         self.assertEqual(scin.split_type, "clinical_user_submitted_optional")
         self.assertTrue(scin.partial_label_set)
         self.assertEqual(ddi.split_type, "clinical_fairness_optional")
