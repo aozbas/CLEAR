@@ -143,44 +143,14 @@ def prepare(
     split_strategy: str = "all-test",
     seed: int = DEFAULT_SEED,
 ) -> pd.DataFrame:
-    try:
-        label_map, deferred_labels, allowed_labels = LABEL_MODES[label_mode]
-    except KeyError as exc:
-        raise ValueError(f"Unknown PAD-UFES label mode: {label_mode}") from exc
+    prepared, excluded_counts, allowed_labels = load_prepared_rows(
+        raw_dir,
+        label_mode=label_mode,
+    )
 
     if split_strategy not in SPLIT_STRATEGIES:
         raise ValueError(f"Unknown PAD-UFES split strategy: {split_strategy}")
 
-    raw_dir = Path(raw_dir)
-    rows = _read_metadata(raw_dir)
-    excluded_counts = dict.fromkeys(deferred_labels, 0)
-    output_rows: list[dict[str, str]] = []
-
-    for row in rows.itertuples(index=False):
-        raw_label = str(row.diagnostic).strip().upper()
-        if raw_label in excluded_counts:
-            excluded_counts[raw_label] += 1
-            continue
-        if raw_label not in label_map:
-            raise ValueError(f"Unknown PAD-UFES diagnostic value: {raw_label}")
-
-        label = label_map[raw_label]
-        validate_label(label, labels=allowed_labels)
-        image_path = _find_image_path(raw_dir, str(row.img_id).strip())
-        output_rows.append(
-            {
-                "patient_id": _required_group_value(row.patient_id, "patient_id"),
-                "lesion_id": _required_group_value(row.lesion_id, "lesion_id"),
-                "image_path": project_relative(image_path),
-                "label": label,
-            }
-        )
-
-    prepared = pd.DataFrame(
-        output_rows,
-        columns=["patient_id", "lesion_id", "image_path", "label"],
-    )
-    _validate_patient_lesions(prepared)
     if split_strategy == "patient":
         assignments = assign_patient_splits(prepared, labels=allowed_labels, seed=seed)
         prepared["split"] = prepared["patient_id"].map(assignments)
@@ -214,6 +184,49 @@ def prepare(
         encoding="utf-8",
     )
     return output
+
+
+def load_prepared_rows(
+    raw_dir: Path,
+    *,
+    label_mode: str,
+) -> tuple[pd.DataFrame, dict[str, int], tuple[str, ...]]:
+    try:
+        label_map, deferred_labels, allowed_labels = LABEL_MODES[label_mode]
+    except KeyError as exc:
+        raise ValueError(f"Unknown PAD-UFES label mode: {label_mode}") from exc
+
+    raw_dir = Path(raw_dir)
+    rows = _read_metadata(raw_dir)
+    excluded_counts = dict.fromkeys(deferred_labels, 0)
+    output_rows: list[dict[str, str]] = []
+
+    for row in rows.itertuples(index=False):
+        raw_label = str(row.diagnostic).strip().upper()
+        if raw_label in excluded_counts:
+            excluded_counts[raw_label] += 1
+            continue
+        if raw_label not in label_map:
+            raise ValueError(f"Unknown PAD-UFES diagnostic value: {raw_label}")
+
+        label = label_map[raw_label]
+        validate_label(label, labels=allowed_labels)
+        image_path = _find_image_path(raw_dir, str(row.img_id).strip())
+        output_rows.append(
+            {
+                "patient_id": _required_group_value(row.patient_id, "patient_id"),
+                "lesion_id": _required_group_value(row.lesion_id, "lesion_id"),
+                "image_path": project_relative(image_path),
+                "label": label,
+            }
+        )
+
+    prepared = pd.DataFrame(
+        output_rows,
+        columns=["patient_id", "lesion_id", "image_path", "label"],
+    )
+    _validate_patient_lesions(prepared)
+    return prepared, excluded_counts, allowed_labels
 
 
 def _required_group_value(value: object, column: str) -> str:
