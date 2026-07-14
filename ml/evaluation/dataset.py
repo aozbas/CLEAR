@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from ml.evaluation.schema import HAM10000_LABELS, VALID_SPLITS, EvaluationExample
+from ml.evaluation.schema import HAM10000_LABELS, VALID_SPLITS, EvaluationExample, validate_label
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 REQUIRED_COLUMNS = {"split", "image_path", "label"}
@@ -19,6 +19,7 @@ def load_examples(
     base_dir: Path | None = None,
     max_samples: int | None = None,
     samples_per_label: int | None = None,
+    labels: tuple[str, ...] = HAM10000_LABELS,
 ) -> list[EvaluationExample]:
     if split not in VALID_SPLITS:
         raise ValueError(f"Unknown split: {split}")
@@ -42,6 +43,7 @@ def load_examples(
             continue
 
         label = str(row.label)
+        validate_label(label, labels=labels)
         image_path = Path(str(row.image_path))
         if not image_path.is_absolute():
             image_path = image_base / image_path
@@ -49,15 +51,17 @@ def load_examples(
         if not image_path.exists():
             raise FileNotFoundError(f"Missing evaluation image: {image_path}")
 
-        examples.append(EvaluationExample(image_path=image_path, label=label, split=row_split))
+        examples.append(
+            EvaluationExample(image_path=image_path, label=label, split=row_split, labels=labels)
+        )
 
     if samples_per_label is not None:
-        by_label: dict[str, list[EvaluationExample]] = {label: [] for label in HAM10000_LABELS}
+        by_label: dict[str, list[EvaluationExample]] = {label: [] for label in labels}
         for example in examples:
             by_label[example.label].append(example)
 
         selected: list[EvaluationExample] = []
-        for label in HAM10000_LABELS:
+        for label in labels:
             selected.extend(by_label[label][:samples_per_label])
         examples = selected
 

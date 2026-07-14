@@ -5,6 +5,7 @@ from tempfile import TemporaryDirectory
 from PIL import Image
 
 from ml.evaluation.dataset import load_examples
+from ml.evaluation.schema import PAD_UFES_NATIVE_LABELS
 
 
 class EvaluationDatasetTests(unittest.TestCase):
@@ -107,6 +108,33 @@ class EvaluationDatasetTests(unittest.TestCase):
         self.assertEqual(
             [example.label for example in examples],
             ["melanoma", "nevus", "vascular_lesion"],
+        )
+
+    def test_samples_per_label_accepts_pad_ufes_native_label_order(self) -> None:
+        with TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            rows = ["split,image_path,label"]
+            for filename, label in (
+                ("scc.jpg", "squamous_cell_carcinoma"),
+                ("melanoma.jpg", "melanoma"),
+                ("sek.jpg", "seborrheic_keratosis"),
+            ):
+                self._write_image(root / filename)
+                rows.append(f"test,{filename},{label}")
+            split_csv = root / "split.csv"
+            split_csv.write_text("\n".join(rows), encoding="utf-8")
+
+            examples = load_examples(
+                split_csv,
+                "test",
+                base_dir=root,
+                samples_per_label=1,
+                labels=PAD_UFES_NATIVE_LABELS,
+            )
+
+        self.assertEqual(
+            [example.label for example in examples],
+            ["melanoma", "squamous_cell_carcinoma", "seborrheic_keratosis"],
         )
 
 

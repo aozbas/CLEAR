@@ -1,9 +1,4 @@
-"""Prepare PAD-UFES-20 as a clinical-phone evaluation split.
-
-This keeps only labels that overlap CLEAR's current Phase-2 label set. SCC,
-Bowen's disease, and separate seborrheic keratosis remain deferred until a
-future label-expansion decision.
-"""
+"""Prepare PAD-UFES-20 clinical-phone evaluation splits."""
 
 from __future__ import annotations
 
@@ -13,7 +8,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from ml.evaluation.schema import validate_label
+from ml.evaluation.schema import HAM10000_LABELS, PAD_UFES_NATIVE_LABELS, validate_label
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_RAW_DIR = PROJECT_ROOT / "ml" / "data" / "raw" / "pad_ufes"
@@ -25,22 +20,44 @@ PAD_UFES_TO_CANONICAL = {
     "BCC": "basal_cell_carcinoma",
     "ACK": "actinic_keratosis",
 }
-DEFERRED_LABELS = ("SCC", "BOD", "BOW", "SEK")
+PAD_UFES_NATIVE_TO_CANONICAL = {
+    **PAD_UFES_TO_CANONICAL,
+    "SCC": "squamous_cell_carcinoma",
+    "SEK": "seborrheic_keratosis",
+}
+LABEL_MODES = {
+    "overlap": (PAD_UFES_TO_CANONICAL, ("SCC", "BOD", "BOW", "SEK"), HAM10000_LABELS),
+    "native": (PAD_UFES_NATIVE_TO_CANONICAL, ("BOD", "BOW"), PAD_UFES_NATIVE_LABELS),
+}
 METADATA_FILENAMES = ("metadata.csv", "PAD-UFES-20.csv", "pad-ufes-20.csv")
 REQUIRED_COLUMNS = {"patient_id", "lesion_id", "img_id", "diagnostic"}
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Prepare PAD-UFES-20 overlap-label split.")
+    parser = argparse.ArgumentParser(description="Prepare PAD-UFES-20 split.")
     parser.add_argument("--raw-dir", type=Path, default=DEFAULT_RAW_DIR)
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT_PATH)
+    parser.add_argument(
+        "--label-mode",
+        choices=sorted(LABEL_MODES),
+        default="overlap",
+        help=(
+            "Use 'overlap' for the current HAM10000/CLEAR overlap labels or 'native' "
+            "for the PAD-UFES six-class phone-photo taxonomy."
+        ),
+    )
     return parser.parse_args()
 
 
-def prepare(raw_dir: Path, out_path: Path) -> pd.DataFrame:
+def prepare(raw_dir: Path, out_path: Path, *, label_mode: str = "overlap") -> pd.DataFrame:
+    try:
+        label_map, deferred_labels, allowed_labels = LABEL_MODES[label_mode]
+    except KeyError as exc:
+        raise ValueError(f"Unknown PAD-UFES label mode: {label_mode}") from exc
+
     raw_dir = Path(raw_dir)
     rows = _read_metadata(raw_dir)
-    excluded_counts = dict.fromkeys(DEFERRED_LABELS, 0)
+    excluded_counts = dict.fromkeys(deferred_labels, 0)
     output_rows: list[dict[str, str]] = []
 
     for row in rows.itertuples(index=False):
@@ -48,11 +65,11 @@ def prepare(raw_dir: Path, out_path: Path) -> pd.DataFrame:
         if raw_label in excluded_counts:
             excluded_counts[raw_label] += 1
             continue
-        if raw_label not in PAD_UFES_TO_CANONICAL:
+        if raw_label not in label_map:
             raise ValueError(f"Unknown PAD-UFES diagnostic value: {raw_label}")
 
-        label = PAD_UFES_TO_CANONICAL[raw_label]
-        validate_label(label)
+        label = label_map[raw_label]
+        validate_label(label, labels=allowed_labels)
         image_path = _find_image_path(raw_dir, str(row.img_id).strip())
         output_rows.append(
             {
@@ -112,10 +129,13 @@ def project_relative(path: Path) -> str:
 
 def main() -> None:
     args = parse_args()
-    output = prepare(args.raw_dir, args.out)
+    output = prepare(args.raw_dir, args.out, label_mode=args.label_mode)
     excluded_counts = json.loads(args.out.with_suffix(".excluded.json").read_text(encoding="utf-8"))
 
-    print(f"Wrote {len(output):,} PAD-UFES overlap-label rows to {project_relative(args.out)}")
+    print(
+        f"Wrote {len(output):,} PAD-UFES {args.label_mode}-label rows to "
+        f"{project_relative(args.out)}"
+    )
     if len(output) > 0:
         print(output["label"].value_counts().sort_index().to_string())
     print("Excluded deferred labels:")

@@ -26,7 +26,7 @@ from ml.evaluation.dataset_sources import (
 )
 from ml.evaluation.metrics import summarize_metrics
 from ml.evaluation.report import write_report
-from ml.evaluation.schema import ModelPrediction
+from ml.evaluation.schema import HAM10000_LABELS, ModelPrediction
 from ml.evaluation.stress import evaluate_phone_stress
 
 DEFAULT_SPLIT_CSV = Path("ml/data/splits/ham10000.csv")
@@ -53,12 +53,14 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     try:
         candidate = get_candidate(args.model)
+        dataset_source = get_dataset_source(args.dataset_source)
+        adapter_labels = _adapter_labels(dataset_source)
         adapter = _build_adapter(
             args.model,
             model_path=args.model_path,
             cache_dir=args.cache_dir,
+            labels=adapter_labels,
         )
-        dataset_source = get_dataset_source(args.dataset_source)
     except ValueError as exc:
         print(str(exc), file=sys.stderr)
         return 2
@@ -68,11 +70,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         args.split,
         max_samples=args.max_samples,
         samples_per_label=args.samples_per_label,
+        labels=_evaluation_labels(dataset_source, adapter.metadata.labels),
     )
     predictions = [adapter.predict_image(example.image_path) for example in examples]
     metrics = summarize_metrics(
         [example.label for example in examples],
         [prediction.label for prediction in predictions],
+        labels=_evaluation_labels(dataset_source, adapter.metadata.labels),
     )
     report_metrics = {**metrics, **_latency_metrics(predictions)}
     if args.phone_stress:
@@ -131,6 +135,7 @@ def _build_adapter(
     *,
     model_path: Path | None,
     cache_dir: Path,
+    labels: tuple[str, ...] = HAM10000_LABELS,
 ) -> (
     BaselineAdapter
     | HuggingFaceImageClassifierAdapter
@@ -166,6 +171,7 @@ def _build_adapter(
             revision=candidate.revision,
             cache_dir=cache_dir,
             license_name=candidate.license,
+            labels=labels,
         )
     if candidate.adapter_type == "transformers_zero_shot":
         return TransformersZeroShotAdapter(
@@ -173,6 +179,7 @@ def _build_adapter(
             revision=candidate.revision,
             cache_dir=cache_dir,
             license_name=candidate.license,
+            labels=labels,
         )
     if candidate.adapter_type == "embedding_linear_probe":
         raise ValueError(
@@ -194,6 +201,22 @@ def _latency_metrics(predictions: Sequence[ModelPrediction]) -> dict[str, float]
         "latency_mean_ms": sum(latencies) / len(latencies),
         "latency_p95_ms": latencies[p95_index],
     }
+
+
+def _adapter_labels(dataset_source: object) -> tuple[str, ...]:
+    partial_label_set = bool(getattr(dataset_source, "partial_label_set", True))
+    if partial_label_set:
+        return HAM10000_LABELS
+    labels = getattr(dataset_source, "labels", HAM10000_LABELS)
+    return tuple(str(label) for label in labels)
+
+
+def _evaluation_labels(dataset_source: object, model_labels: list[str]) -> tuple[str, ...]:
+    partial_label_set = bool(getattr(dataset_source, "partial_label_set", True))
+    if partial_label_set:
+        return tuple(model_labels)
+    labels = getattr(dataset_source, "labels", model_labels)
+    return tuple(str(label) for label in labels)
 
 
 def _dataset_metadata(

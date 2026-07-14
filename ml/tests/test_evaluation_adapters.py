@@ -14,7 +14,12 @@ from ml.evaluation.adapters.huggingface_image_classifier import (
 )
 from ml.evaluation.adapters.keras_h5 import KerasH5Adapter
 from ml.evaluation.adapters.zero_shot import OpenClipZeroShotAdapter, TransformersZeroShotAdapter
-from ml.evaluation.schema import HAM10000_LABELS, ModelMetadata, ModelPrediction
+from ml.evaluation.schema import (
+    HAM10000_LABELS,
+    PAD_UFES_NATIVE_LABELS,
+    ModelMetadata,
+    ModelPrediction,
+)
 
 
 class FakeAdapter:
@@ -305,6 +310,28 @@ class EvaluationAdapterTests(unittest.TestCase):
         self.assertEqual(adapter.metadata.adapter, "open_clip_zero_shot")
         self.assertEqual(adapter.metadata.revision, "abc123")
 
+    def test_open_clip_zero_shot_adapter_accepts_pad_ufes_native_labels(self) -> None:
+        with TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            image_path = root / "image.jpg"
+            self._write_image(image_path)
+
+            adapter = OpenClipZeroShotAdapter(
+                model_id="example/openclip",
+                revision="abc123",
+                cache_dir=root / "cache",
+                license_name="mit",
+                open_clip_module=FakeOpenClipModule(),
+                torch_module=torch,
+                device="cpu",
+                labels=PAD_UFES_NATIVE_LABELS,
+            )
+            prediction = adapter.predict_image(image_path)
+
+        self.assertEqual(prediction.label, "actinic_keratosis")
+        self.assertEqual(set(prediction.probabilities or {}), set(PAD_UFES_NATIVE_LABELS))
+        self.assertEqual(adapter.metadata.labels, list(PAD_UFES_NATIVE_LABELS))
+
     def test_transformers_zero_shot_adapter_scores_canonical_prompts(self) -> None:
         with TemporaryDirectory() as tmp_dir:
             root = Path(tmp_dir)
@@ -443,7 +470,7 @@ class FakeTransformersZeroShotModel:
         return self
 
     def __call__(self, **kwargs):
-        logits = torch.zeros(1, len(HAM10000_LABELS))
+        logits = torch.zeros(1, kwargs["input_ids"].shape[0])
         logits[0, 0] = 4.0
         return type("FakeOutputs", (), {"logits_per_image": logits})()
 
