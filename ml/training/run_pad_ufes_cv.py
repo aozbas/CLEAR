@@ -7,10 +7,12 @@ import subprocess
 import sys
 from pathlib import Path
 
+from ml.preprocessing import PAD_UFES_AUGMENTATION_PROFILES
 from ml.training.prepare_pad_ufes import project_relative
 from ml.training.prepare_pad_ufes_cv import DEFAULT_FOLDS
 from ml.training.summarize_pad_ufes_cv import summarize_reports
 from ml.training.train import resolve_project_path
+from ml.training.train_pad_ufes import LR_SCHEDULES
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SPLITS_DIR = PROJECT_ROOT / "ml" / "data" / "external_splits" / "pad_ufes_native_cv_224"
@@ -30,6 +32,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--weight-decay", type=float, default=1e-4)
+    parser.add_argument(
+        "--augmentation-profile",
+        choices=PAD_UFES_AUGMENTATION_PROFILES,
+        default="baseline",
+    )
+    parser.add_argument("--label-smoothing", type=float, default=0.0)
+    parser.add_argument("--lr-schedule", choices=LR_SCHEDULES, default="none")
     parser.add_argument("--num-workers", type=int, default=0)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--device", choices=("auto", "cpu", "cuda"), default="cuda")
@@ -46,6 +55,9 @@ def build_training_command(
     batch_size: int,
     lr: float,
     weight_decay: float,
+    augmentation_profile: str,
+    label_smoothing: float,
+    lr_schedule: str,
     num_workers: int,
     seed: int,
     device: str,
@@ -71,6 +83,12 @@ def build_training_command(
         str(lr),
         "--weight-decay",
         str(weight_decay),
+        "--augmentation-profile",
+        augmentation_profile,
+        "--label-smoothing",
+        str(label_smoothing),
+        "--lr-schedule",
+        lr_schedule,
         "--num-workers",
         str(num_workers),
         "--seed",
@@ -85,6 +103,8 @@ def run_cross_validation(args: argparse.Namespace) -> None:
         raise ValueError("folds must be at least 3.")
     if args.epochs <= 0 or args.batch_size <= 0:
         raise ValueError("epochs and batch_size must be positive.")
+    if not 0.0 <= args.label_smoothing < 1.0:
+        raise ValueError("label_smoothing must be in the range [0, 1).")
 
     splits_dir = resolve_project_path(args.splits_dir)
     runs_root = resolve_project_path(args.runs_root)
@@ -114,6 +134,9 @@ def run_cross_validation(args: argparse.Namespace) -> None:
             batch_size=args.batch_size,
             lr=args.lr,
             weight_decay=args.weight_decay,
+            augmentation_profile=args.augmentation_profile,
+            label_smoothing=args.label_smoothing,
+            lr_schedule=args.lr_schedule,
             num_workers=args.num_workers,
             seed=args.seed,
             device=args.device,
@@ -144,6 +167,10 @@ def run_cross_validation(args: argparse.Namespace) -> None:
         runs_root / "summary.json",
         num_folds=args.folds,
         seed=args.seed,
+        augmentation_profile=args.augmentation_profile,
+        label_smoothing=args.label_smoothing,
+        lr_schedule=args.lr_schedule,
+        weight_decay=args.weight_decay,
     )
     macro_f1 = summary["fold_metrics"]["macro_f1"]
     print(

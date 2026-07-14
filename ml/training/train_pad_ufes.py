@@ -20,7 +20,7 @@ from torch.utils.data import Dataset
 from torchvision import models
 
 from ml.evaluation.schema import PAD_UFES_NATIVE_LABELS, VALID_SPLITS
-from ml.preprocessing import get_transforms
+from ml.preprocessing import PAD_UFES_AUGMENTATION_PROFILES, get_pad_ufes_transforms
 from ml.training.train import (
     build_loader,
     class_weights,
@@ -39,6 +39,7 @@ DEFAULT_RUN_DIR = PROJECT_ROOT / "ml" / "runs" / "training" / "pad_ufes_resnet18
 DEFAULT_SEED = 42
 REQUIRED_COLUMNS = {"split", "image_path", "label"}
 WEIGHT_CHOICES = ("imagenet", "none")
+LR_SCHEDULES = ("none", "cosine")
 
 
 def parse_args() -> argparse.Namespace:
@@ -53,6 +54,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--weight-decay", type=float, default=1e-4)
+    parser.add_argument(
+        "--augmentation-profile",
+        choices=PAD_UFES_AUGMENTATION_PROFILES,
+        default="baseline",
+    )
+    parser.add_argument("--label-smoothing", type=float, default=0.0)
+    parser.add_argument("--lr-schedule", choices=LR_SCHEDULES, default="none")
     parser.add_argument("--num-workers", type=int, default=0)
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
     parser.add_argument("--device", choices=("auto", "cpu", "cuda"), default="auto")
@@ -164,6 +172,7 @@ class PadUfesDataset(Dataset):
         *,
         max_samples: int | None = None,
         seed: int = DEFAULT_SEED,
+        augmentation_profile: str = "baseline",
     ) -> None:
         split_rows = rows[rows["split"] == split].copy()
         if max_samples is not None and max_samples < len(split_rows):
@@ -171,7 +180,10 @@ class PadUfesDataset(Dataset):
 
         self.rows = split_rows.reset_index(drop=True)
         self.label_to_idx = {label: index for index, label in enumerate(PAD_UFES_NATIVE_LABELS)}
-        self.transform = get_transforms("train" if split == "train" else "val")
+        self.transform = get_pad_ufes_transforms(
+            "train" if split == "train" else "val",
+            augmentation_profile=augmentation_profile,
+        )
 
     def __len__(self) -> int:
         return len(self.rows)
@@ -233,6 +245,7 @@ def save_checkpoint(
     weights: str,
     seed: int,
     hyperparameters: dict[str, object],
+    augmentation_profile: str = "baseline",
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     torch.save(
@@ -249,6 +262,7 @@ def save_checkpoint(
                 models.ResNet18_Weights.DEFAULT.name if weights == "imagenet" else None
             ),
             "preprocessing": "resize_224_imagenet_normalization",
+            "augmentation_profile": augmentation_profile,
             "selection_metric": "val_macro_f1",
             "epoch": epoch,
             "seed": seed,
@@ -259,8 +273,23 @@ def save_checkpoint(
     )
 
 
+def build_lr_scheduler(
+    optimizer: torch.optim.Optimizer,
+    *,
+    schedule: str,
+    epochs: int,
+) -> torch.optim.lr_scheduler.LRScheduler | None:
+    if schedule == "none":
+        return None
+    if schedule == "cosine":
+        return torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
+    raise ValueError(f"Unknown learning-rate schedule: {schedule!r}")
+
+
 def main() -> None:
     args = parse_args()
+    if not 0.0 <= args.label_smoothing < 1.0:
+        raise ValueError("label_smoothing must be in the range [0, 1).")
     set_seed(args.seed)
     device = get_device(args.device)
     split_csv = resolve_project_path(args.split_csv)
@@ -273,18 +302,21 @@ def main() -> None:
         "train",
         max_samples=args.max_train_samples,
         seed=args.seed,
+        augmentation_profile=args.augmentation_profile,
     )
     val_dataset = PadUfesDataset(
         rows,
         "val",
         max_samples=args.max_val_samples,
         seed=args.seed,
+        augmentation_profile=args.augmentation_profile,
     )
     test_dataset = PadUfesDataset(
         rows,
         "test",
         max_samples=args.max_test_samples,
         seed=args.seed,
+        augmentation_profile=args.augmentation_profile,
     )
     print(f"Using device: {device}")
     print(
@@ -312,17 +344,28 @@ def main() -> None:
 
     model = build_transfer_model(weights=args.weights).to(device)
     loss_weights = class_weights(train_dataset.labels(), len(PAD_UFES_NATIVE_LABELS), device)
-    criterion = nn.CrossEntropyLoss(weight=loss_weights)
+    criterion = nn.CrossEntropyLoss(
+        weight=loss_weights,
+        label_smoothing=args.label_smoothing,
+    )
     optimizer = torch.optim.AdamW(
         model.parameters(),
         lr=args.lr,
         weight_decay=args.weight_decay,
+    )
+    scheduler = build_lr_scheduler(
+        optimizer,
+        schedule=args.lr_schedule,
+        epochs=args.epochs,
     )
     hyperparameters = {
         "epochs": args.epochs,
         "batch_size": args.batch_size,
         "learning_rate": args.lr,
         "weight_decay": args.weight_decay,
+        "augmentation_profile": args.augmentation_profile,
+        "label_smoothing": args.label_smoothing,
+        "lr_schedule": args.lr_schedule,
         "class_weighting": "inverse_frequency_from_train_split",
         "class_weights": {
             label: float(loss_weights[index].item())
@@ -338,6 +381,7 @@ def main() -> None:
 
     for epoch in range(1, args.epochs + 1):
         print(f"\nEpoch {epoch}/{args.epochs}")
+        learning_rate = float(optimizer.param_groups[0]["lr"])
         train_metrics = add_macro_metrics(
             run_epoch(
                 model,
@@ -359,7 +403,14 @@ def main() -> None:
         )
         print_metrics("train", train_metrics)
         print_metrics("val", val_metrics)
-        history.append({"epoch": epoch, "train": train_metrics, "val": val_metrics})
+        history.append(
+            {
+                "epoch": epoch,
+                "learning_rate": learning_rate,
+                "train": train_metrics,
+                "val": val_metrics,
+            }
+        )
 
         macro_f1 = float(val_metrics["macro_f1"])
         val_loss = float(val_metrics["loss"])
@@ -378,8 +429,11 @@ def main() -> None:
                 weights=args.weights,
                 seed=args.seed,
                 hyperparameters=hyperparameters,
+                augmentation_profile=args.augmentation_profile,
             )
             print(f"Saved checkpoint: {checkpoint}")
+        if scheduler is not None:
+            scheduler.step()
 
     checkpoint_data = torch.load(checkpoint, map_location=device)
     model.load_state_dict(checkpoint_data["model_state_dict"])
@@ -405,6 +459,7 @@ def main() -> None:
             models.ResNet18_Weights.DEFAULT.name if args.weights == "imagenet" else None
         ),
         "preprocessing": "resize_224_imagenet_normalization",
+        "augmentation_profile": args.augmentation_profile,
         "labels": list(PAD_UFES_NATIVE_LABELS),
         "seed": args.seed,
         "split_csv": str(split_csv),
