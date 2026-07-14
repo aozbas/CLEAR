@@ -33,6 +33,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT_PATH)
     parser.add_argument("--folds", type=int, default=DEFAULT_FOLDS)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--augmentation-profile", default="baseline")
+    parser.add_argument("--label-smoothing", type=float, default=0.0)
+    parser.add_argument("--lr-schedule", default="none")
+    parser.add_argument("--weight-decay", type=float, default=1e-4)
     return parser.parse_args()
 
 
@@ -42,6 +46,10 @@ def summarize_reports(
     *,
     num_folds: int = DEFAULT_FOLDS,
     seed: int = 42,
+    augmentation_profile: str = "baseline",
+    label_smoothing: float = 0.0,
+    lr_schedule: str = "none",
+    weight_decay: float = 1e-4,
 ) -> dict[str, object]:
     reports_root = resolve_project_path(Path(reports_root))
     reports = []
@@ -55,6 +63,10 @@ def summarize_reports(
             fold_index=fold_index,
             num_folds=num_folds,
             seed=seed,
+            augmentation_profile=augmentation_profile,
+            label_smoothing=label_smoothing,
+            lr_schedule=lr_schedule,
+            weight_decay=weight_decay,
         )
         reports.append(report)
 
@@ -105,6 +117,10 @@ def summarize_reports(
         "architecture": "resnet18",
         "input_mode": "image_only",
         "pretrained_weights": "imagenet",
+        "augmentation_profile": augmentation_profile,
+        "label_smoothing": label_smoothing,
+        "lr_schedule": lr_schedule,
+        "weight_decay": weight_decay,
         "fold_metrics": fold_metrics,
         "best_validation_macro_f1": _distribution(
             [float(report["best_val_macro_f1"]) for report in reports]
@@ -138,6 +154,10 @@ def _validate_report(
     fold_index: int,
     num_folds: int,
     seed: int,
+    augmentation_profile: str,
+    label_smoothing: float,
+    lr_schedule: str,
+    weight_decay: float,
 ) -> None:
     expected = {
         "architecture": "resnet18",
@@ -153,6 +173,27 @@ def _validate_report(
     ]
     if report.get("labels") != list(PAD_UFES_NATIVE_LABELS):
         mismatches.append("labels do not match PAD-UFES-native order")
+
+    hyperparameters = report.get("hyperparameters")
+    if not isinstance(hyperparameters, dict):
+        hyperparameters = {}
+    legacy_defaults = {
+        "augmentation_profile": "baseline",
+        "label_smoothing": 0.0,
+        "lr_schedule": "none",
+        "weight_decay": 1e-4,
+    }
+    training_expected = {
+        "augmentation_profile": augmentation_profile,
+        "label_smoothing": label_smoothing,
+        "lr_schedule": lr_schedule,
+        "weight_decay": weight_decay,
+    }
+    mismatches.extend(
+        f"hyperparameters.{key}={hyperparameters.get(key, legacy_defaults[key])!r}"
+        for key, expected_value in training_expected.items()
+        if hyperparameters.get(key, legacy_defaults[key]) != expected_value
+    )
 
     split_summary = report.get("split_summary")
     if not isinstance(split_summary, dict):
@@ -228,6 +269,10 @@ def main() -> None:
         args.out,
         num_folds=args.folds,
         seed=args.seed,
+        augmentation_profile=args.augmentation_profile,
+        label_smoothing=args.label_smoothing,
+        lr_schedule=args.lr_schedule,
+        weight_decay=args.weight_decay,
     )
     fold_macro_f1 = summary["fold_metrics"]["macro_f1"]
     print(

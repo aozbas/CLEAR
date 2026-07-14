@@ -6,11 +6,14 @@ from tempfile import TemporaryDirectory
 import pandas as pd
 import torch
 import torch.nn as nn
+from torchvision import transforms
 
 from ml.evaluation.schema import PAD_UFES_NATIVE_LABELS
+from ml.preprocessing import get_pad_ufes_transforms
 from ml.training.train_pad_ufes import (
     PadUfesDataset,
     add_macro_metrics,
+    build_lr_scheduler,
     build_transfer_model,
     load_training_split,
     save_checkpoint,
@@ -127,6 +130,46 @@ class TransferModelTests(unittest.TestCase):
         self.assertEqual(metrics["macro_precision"], 0.5)
         self.assertAlmostEqual(metrics["macro_f1"], 1.0 / 3.0)
 
+    def test_regularized_profile_augments_train_but_not_validation(self) -> None:
+        train_transform = get_pad_ufes_transforms(
+            "train",
+            augmentation_profile="regularized_v2",
+        )
+        val_transform = get_pad_ufes_transforms(
+            "val",
+            augmentation_profile="regularized_v2",
+        )
+
+        self.assertTrue(
+            any(
+                isinstance(transform, transforms.RandomVerticalFlip)
+                for transform in train_transform.transforms
+            )
+        )
+        self.assertTrue(
+            any(
+                isinstance(transform, transforms.RandomErasing)
+                for transform in train_transform.transforms
+            )
+        )
+        self.assertFalse(
+            any(
+                isinstance(transform, transforms.RandomVerticalFlip)
+                for transform in val_transform.transforms
+            )
+        )
+
+    def test_cosine_scheduler_decays_learning_rate(self) -> None:
+        model = nn.Linear(2, 2)
+        optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4)
+        scheduler = build_lr_scheduler(optimizer, schedule="cosine", epochs=4)
+
+        self.assertIsNotNone(scheduler)
+        optimizer.step()
+        scheduler.step()
+
+        self.assertLess(optimizer.param_groups[0]["lr"], 1e-4)
+
     def test_checkpoint_records_image_only_native_configuration(self) -> None:
         with TemporaryDirectory() as tmp_dir:
             checkpoint = Path(tmp_dir) / "model.pt"
@@ -137,7 +180,13 @@ class TransferModelTests(unittest.TestCase):
                 val_metrics={"macro_f1": 0.4},
                 weights="none",
                 seed=42,
-                hyperparameters={"learning_rate": 0.001},
+                hyperparameters={
+                    "learning_rate": 0.001,
+                    "augmentation_profile": "regularized_v2",
+                    "label_smoothing": 0.1,
+                    "lr_schedule": "cosine",
+                },
+                augmentation_profile="regularized_v2",
             )
             saved = torch.load(checkpoint, map_location="cpu")
 
@@ -145,6 +194,8 @@ class TransferModelTests(unittest.TestCase):
         self.assertEqual(saved["label_set"], "pad_ufes_native")
         self.assertEqual(saved["selection_metric"], "val_macro_f1")
         self.assertEqual(saved["labels"], list(PAD_UFES_NATIVE_LABELS))
+        self.assertEqual(saved["augmentation_profile"], "regularized_v2")
+        self.assertEqual(saved["hyperparameters"]["label_smoothing"], 0.1)
 
 
 if __name__ == "__main__":

@@ -7,7 +7,15 @@ from ml.evaluation.schema import PAD_UFES_NATIVE_LABELS
 from ml.training.summarize_pad_ufes_cv import summarize_reports
 
 
-def fake_report(fold_index: int, *, protocol: str = "patient_grouped_rotating_cv") -> dict:
+def fake_report(
+    fold_index: int,
+    *,
+    protocol: str = "patient_grouped_rotating_cv",
+    augmentation_profile: str = "baseline",
+    label_smoothing: float = 0.0,
+    lr_schedule: str = "none",
+    weight_decay: float = 1e-4,
+) -> dict:
     size = len(PAD_UFES_NATIVE_LABELS)
     confusion = [[0 for _ in range(size)] for _ in range(size)]
     per_class = {}
@@ -28,6 +36,12 @@ def fake_report(fold_index: int, *, protocol: str = "patient_grouped_rotating_cv
         "labels": list(PAD_UFES_NATIVE_LABELS),
         "best_epoch": 2,
         "best_val_macro_f1": 0.8,
+        "hyperparameters": {
+            "augmentation_profile": augmentation_profile,
+            "label_smoothing": label_smoothing,
+            "lr_schedule": lr_schedule,
+            "weight_decay": weight_decay,
+        },
         "split_summary": {
             "protocol": protocol,
             "num_folds": 5,
@@ -48,12 +62,12 @@ def fake_report(fold_index: int, *, protocol: str = "patient_grouped_rotating_cv
     }
 
 
-def write_reports(root: Path) -> None:
+def write_reports(root: Path, **configuration: object) -> None:
     for fold_index in range(5):
         fold_dir = root / f"fold_{fold_index}"
         fold_dir.mkdir(parents=True)
         (fold_dir / "report.json").write_text(
-            json.dumps(fake_report(fold_index)),
+            json.dumps(fake_report(fold_index, **configuration)),
             encoding="utf-8",
         )
 
@@ -93,6 +107,66 @@ class SummarizePadUfesCrossValidationTests(unittest.TestCase):
 
             with self.assertRaisesRegex(ValueError, "violates the locked protocol"):
                 summarize_reports(root, root / "summary.json", num_folds=5, seed=42)
+
+    def test_accepts_completed_legacy_baseline_reports_without_new_fields(self) -> None:
+        with TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            write_reports(root)
+            for fold_index in range(5):
+                report_path = root / f"fold_{fold_index}" / "report.json"
+                report = json.loads(report_path.read_text(encoding="utf-8"))
+                report.pop("hyperparameters")
+                report_path.write_text(json.dumps(report), encoding="utf-8")
+
+            summary = summarize_reports(root, root / "summary.json", num_folds=5, seed=42)
+
+        self.assertEqual(summary["augmentation_profile"], "baseline")
+
+    def test_verifies_regularized_training_configuration(self) -> None:
+        configuration = {
+            "augmentation_profile": "regularized_v2",
+            "label_smoothing": 0.1,
+            "lr_schedule": "cosine",
+            "weight_decay": 1e-3,
+        }
+        with TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            write_reports(root, **configuration)
+
+            summary = summarize_reports(
+                root,
+                root / "summary.json",
+                num_folds=5,
+                seed=42,
+                **configuration,
+            )
+
+        self.assertEqual(summary["augmentation_profile"], "regularized_v2")
+        self.assertEqual(summary["label_smoothing"], 0.1)
+
+    def test_rejects_regularized_configuration_mismatch(self) -> None:
+        configuration = {
+            "augmentation_profile": "regularized_v2",
+            "label_smoothing": 0.1,
+            "lr_schedule": "cosine",
+            "weight_decay": 1e-3,
+        }
+        with TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            write_reports(root, **configuration)
+            report_path = root / "fold_2" / "report.json"
+            report = json.loads(report_path.read_text(encoding="utf-8"))
+            report["hyperparameters"]["label_smoothing"] = 0.0
+            report_path.write_text(json.dumps(report), encoding="utf-8")
+
+            with self.assertRaisesRegex(ValueError, "violates the locked protocol"):
+                summarize_reports(
+                    root,
+                    root / "summary.json",
+                    num_folds=5,
+                    seed=42,
+                    **configuration,
+                )
 
 
 if __name__ == "__main__":
