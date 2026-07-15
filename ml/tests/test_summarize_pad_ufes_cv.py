@@ -39,6 +39,9 @@ def fake_report(
         "best_epoch": 2,
         "best_val_macro_f1": 0.8,
         "hyperparameters": {
+            "epochs": 15,
+            "batch_size": 32,
+            "learning_rate": 1e-4,
             "augmentation_profile": augmentation_profile,
             "label_smoothing": label_smoothing,
             "lr_schedule": lr_schedule,
@@ -201,6 +204,18 @@ class SummarizePadUfesCrossValidationTests(unittest.TestCase):
                     seed=42,
                     **configuration,
                 )
+
+    def test_rejects_mixed_core_training_hyperparameters(self) -> None:
+        with TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            write_reports(root)
+            report_path = root / "fold_2" / "report.json"
+            report = json.loads(report_path.read_text(encoding="utf-8"))
+            report["hyperparameters"]["learning_rate"] = 2e-4
+            report_path.write_text(json.dumps(report), encoding="utf-8")
+
+            with self.assertRaisesRegex(ValueError, "violates the locked protocol"):
+                summarize_reports(root, root / "summary.json", num_folds=5, seed=42)
 
 
 if __name__ == "__main__":

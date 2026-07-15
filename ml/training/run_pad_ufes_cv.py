@@ -115,6 +115,12 @@ def run_cross_validation(args: argparse.Namespace) -> None:
         raise ValueError("folds must be at least 3.")
     if args.epochs <= 0 or args.batch_size <= 0:
         raise ValueError("epochs and batch_size must be positive.")
+    if args.lr <= 0.0:
+        raise ValueError("lr must be positive.")
+    if args.weight_decay < 0.0:
+        raise ValueError("weight_decay must be non-negative.")
+    if args.num_workers < 0:
+        raise ValueError("num_workers must be non-negative.")
     if not 0.0 <= args.label_smoothing < 1.0:
         raise ValueError("label_smoothing must be in the range [0, 1).")
 
@@ -182,6 +188,9 @@ def run_cross_validation(args: argparse.Namespace) -> None:
         num_folds=args.folds,
         seed=args.seed,
         architecture=args.architecture,
+        epochs=args.epochs,
+        batch_size=args.batch_size,
+        learning_rate=args.lr,
         augmentation_profile=args.augmentation_profile,
         label_smoothing=args.label_smoothing,
         lr_schedule=args.lr_schedule,

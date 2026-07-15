@@ -76,7 +76,38 @@ class MaterializeSplitImagesTests(unittest.TestCase):
         self.assertEqual(second_stats["reused_image_count"], 1)
         self.assertEqual(first.iloc[0]["image_path"], second.iloc[0]["image_path"])
         self.assertTrue(output_summary["materialization"]["lossless"])
+        self.assertEqual(
+            output_summary["materialization"]["cache_key"],
+            "source_path_and_content_sha256",
+        )
         self.assertEqual(output_summary["protocol"], "patient_grouped_rotating_cv")
+
+    def test_source_content_change_invalidates_cached_target(self) -> None:
+        with TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            source = root / "source.png"
+            Image.new("RGB", (32, 32), color=(20, 40, 60)).save(source)
+            split_csv = root / "fold_0.csv"
+            pd.DataFrame(
+                [{"split": "test", "image_path": source.as_posix(), "label": "melanoma"}]
+            ).to_csv(split_csv, index=False)
+            split_csv.with_suffix(".summary.json").write_text(
+                json.dumps({"image_count": 1}),
+                encoding="utf-8",
+            )
+            image_dir = root / "processed"
+
+            first, _ = materialize_split(split_csv, root / "first.csv", image_dir, workers=1)
+            Image.new("RGB", (32, 32), color=(200, 100, 50)).save(source)
+            second, stats = materialize_split(
+                split_csv,
+                root / "second.csv",
+                image_dir,
+                workers=1,
+            )
+
+        self.assertNotEqual(first.iloc[0]["image_path"], second.iloc[0]["image_path"])
+        self.assertEqual(stats["created_image_count"], 1)
 
 
 if __name__ == "__main__":

@@ -112,6 +112,21 @@ class PrepareDerm7ptTests(unittest.TestCase):
             with self.assertRaises(FileNotFoundError):
                 prepare(raw_dir, root / "derm7pt.csv")
 
+    def test_prepare_rejects_unknown_diagnosis_instead_of_silently_dropping_it(self) -> None:
+        with TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            raw_dir = root / "derm7pt" / "release_v0"
+            self._write_release(
+                raw_dir,
+                metadata_rows=[("unexpected lesion", "derm/image.jpg")],
+                train_indexes=[],
+                valid_indexes=[],
+                test_indexes=[0],
+            )
+
+            with self.assertRaisesRegex(ValueError, "Unknown Derm7pt diagnosis"):
+                prepare(raw_dir, root / "derm7pt.csv")
+
 
 if __name__ == "__main__":
     unittest.main()

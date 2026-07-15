@@ -92,6 +92,7 @@ def materialize_split(
         "size": list(IMAGE_SIZE),
         "interpolation": "bilinear",
         "antialias": True,
+        "cache_key": "source_path_and_content_sha256",
         "unique_image_count": len(source_paths),
         "created_image_count": created_count,
         "reused_image_count": len(source_paths) - created_count,
@@ -117,7 +118,7 @@ def _materialize_one(
     if not source.exists():
         raise FileNotFoundError(f"Missing source image: {source}")
 
-    digest = hashlib.sha256(source_path.encode("utf-8")).hexdigest()
+    digest = _source_digest(source, source_path)
     target = image_dir / f"{digest}.png"
     if target.exists() and not overwrite:
         _validate_materialized_image(target)
@@ -139,6 +140,16 @@ def _materialize_one(
         temporary.unlink(missing_ok=True)
     _validate_materialized_image(target)
     return source_path, project_relative(target), True
+
+
+def _source_digest(source: Path, source_path: str) -> str:
+    digest = hashlib.sha256()
+    digest.update(source_path.encode("utf-8"))
+    digest.update(b"\0")
+    with source.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _validate_materialized_image(path: Path) -> None:

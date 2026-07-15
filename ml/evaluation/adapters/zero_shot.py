@@ -8,9 +8,12 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from huggingface_hub import snapshot_download
 from PIL import Image
 
 from ml.evaluation.schema import HAM10000_LABELS, ModelMetadata, ModelPrediction
+
+DownloadSnapshot = Callable[..., str]
 
 LABEL_PROMPTS = {
     "melanoma": "a clinical skin lesion image of melanoma",
@@ -37,6 +40,7 @@ class OpenClipZeroShotAdapter:
         torch_module: Any | None = None,
         device: str | None = None,
         labels: tuple[str, ...] = HAM10000_LABELS,
+        download_snapshot: DownloadSnapshot | None = None,
     ) -> None:
         self.model_id = model_id
         self.revision = revision
@@ -45,16 +49,24 @@ class OpenClipZeroShotAdapter:
         self._torch = torch_module or _import_optional("torch", "torch")
         self._open_clip = open_clip_module or _import_optional("open_clip", "open_clip_torch")
         self.device = device or ("cuda" if self._torch.cuda.is_available() else "cpu")
-        hub_model_id = f"hf-hub:{model_id}"
+        downloader = download_snapshot or snapshot_download
+        snapshot_path = Path(
+            downloader(
+                repo_id=model_id,
+                revision=revision,
+                cache_dir=cache_dir,
+            )
+        )
+        local_model_id = f"local-dir:{snapshot_path}"
 
         model, _, preprocess = self._open_clip.create_model_and_transforms(
-            hub_model_id,
+            local_model_id,
             cache_dir=cache_dir,
         )
         self._model = model.to(self.device)
         self._model.eval()
         self._preprocess = preprocess
-        self._tokenizer = self._open_clip.get_tokenizer(hub_model_id)
+        self._tokenizer = self._open_clip.get_tokenizer(local_model_id)
         self._prompts = _canonical_prompts(self._labels)
         self.metadata = ModelMetadata(
             name=model_id,

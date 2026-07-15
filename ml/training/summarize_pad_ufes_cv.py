@@ -34,6 +34,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--architecture", default="resnet18")
     parser.add_argument("--folds", type=int, default=DEFAULT_FOLDS)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--epochs", type=int, default=15)
+    parser.add_argument("--batch-size", type=int, default=32)
+    parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--augmentation-profile", default="baseline")
     parser.add_argument("--label-smoothing", type=float, default=0.0)
     parser.add_argument("--lr-schedule", default="none")
@@ -49,6 +52,9 @@ def summarize_reports(
     num_folds: int = DEFAULT_FOLDS,
     seed: int = 42,
     architecture: str = "resnet18",
+    epochs: int = 15,
+    batch_size: int = 32,
+    learning_rate: float = 1e-4,
     augmentation_profile: str = "baseline",
     label_smoothing: float = 0.0,
     lr_schedule: str = "none",
@@ -68,6 +74,9 @@ def summarize_reports(
             num_folds=num_folds,
             seed=seed,
             architecture=architecture,
+            epochs=epochs,
+            batch_size=batch_size,
+            learning_rate=learning_rate,
             augmentation_profile=augmentation_profile,
             label_smoothing=label_smoothing,
             lr_schedule=lr_schedule,
@@ -123,6 +132,9 @@ def summarize_reports(
         "architecture": architecture,
         "input_mode": "image_only",
         "pretrained_weights": "imagenet",
+        "epochs": epochs,
+        "batch_size": batch_size,
+        "learning_rate": learning_rate,
         "augmentation_profile": augmentation_profile,
         "label_smoothing": label_smoothing,
         "lr_schedule": lr_schedule,
@@ -162,6 +174,9 @@ def _validate_report(
     num_folds: int,
     seed: int,
     architecture: str,
+    epochs: int,
+    batch_size: int,
+    learning_rate: float,
     augmentation_profile: str,
     label_smoothing: float,
     lr_schedule: str,
@@ -192,6 +207,9 @@ def _validate_report(
         "lr_schedule": "none",
         "weight_decay": 1e-4,
         "imbalance_strategy": "inverse_frequency_loss",
+        "epochs": 15,
+        "batch_size": 32,
+        "learning_rate": 1e-4,
     }
     training_expected = {
         "augmentation_profile": augmentation_profile,
@@ -199,6 +217,9 @@ def _validate_report(
         "lr_schedule": lr_schedule,
         "weight_decay": weight_decay,
         "imbalance_strategy": imbalance_strategy,
+        "epochs": epochs,
+        "batch_size": batch_size,
+        "learning_rate": learning_rate,
     }
     mismatches.extend(
         f"hyperparameters.{key}={hyperparameters.get(key, legacy_defaults[key])!r}"
@@ -281,6 +302,9 @@ def main() -> None:
         num_folds=args.folds,
         seed=args.seed,
         architecture=args.architecture,
+        epochs=args.epochs,
+        batch_size=args.batch_size,
+        learning_rate=args.lr,
         augmentation_profile=args.augmentation_profile,
         label_smoothing=args.label_smoothing,
         lr_schedule=args.lr_schedule,
