@@ -63,8 +63,10 @@ class EvaluationDatasetSourceTests(unittest.TestCase):
         self.assertFalse(pad_ufes_native.partial_label_set)
         self.assertEqual(scin.split_type, "clinical_user_submitted_optional")
         self.assertTrue(scin.partial_label_set)
-        self.assertEqual(ddi.split_type, "clinical_fairness_optional")
+        self.assertEqual(ddi.split_type, "clinical_stress_optional")
         self.assertTrue(ddi.partial_label_set)
+        self.assertTrue(any("ml.evaluation.ddi" in note for note in ddi.notes))
+        self.assertTrue(any("not smartphone" in note for note in ddi.notes))
 
     def test_known_overlap_warns_for_ham10000_trained_candidate_on_ham10000(self) -> None:
         notes = contamination_notes(
