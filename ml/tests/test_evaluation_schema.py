@@ -1,6 +1,6 @@
 import unittest
 
-from ml.evaluation.schema import HAM10000_LABELS, ModelPrediction
+from ml.evaluation.schema import HAM10000_LABELS, PAD_UFES_NATIVE_LABELS, ModelPrediction
 
 
 class EvaluationSchemaTests(unittest.TestCase):
@@ -24,9 +24,18 @@ class EvaluationSchemaTests(unittest.TestCase):
         self.assertEqual(prediction.label, "nevus")
         self.assertEqual(prediction.confidence, 0.85)
 
+    def test_prediction_accepts_pad_ufes_native_label_set(self) -> None:
+        prediction = ModelPrediction(
+            label="squamous_cell_carcinoma",
+            confidence=0.85,
+            labels=PAD_UFES_NATIVE_LABELS,
+        )
+
+        self.assertEqual(prediction.label, "squamous_cell_carcinoma")
+
     def test_prediction_rejects_unknown_label(self) -> None:
         with self.assertRaises(ValueError):
-            ModelPrediction(label="squamous_cell_carcinoma", confidence=0.5)
+            ModelPrediction(label="not_a_real_label", confidence=0.5)
 
     def test_prediction_rejects_confidence_outside_probability_range(self) -> None:
         for confidence in (-0.01, 1.01):

@@ -1,7 +1,7 @@
 import unittest
 
 from ml.evaluation.metrics import confusion_matrix, per_class_metrics, summarize_metrics
-from ml.evaluation.schema import HAM10000_LABELS
+from ml.evaluation.schema import HAM10000_LABELS, PAD_UFES_NATIVE_LABELS
 
 
 class EvaluationMetricsTests(unittest.TestCase):
@@ -63,6 +63,52 @@ class EvaluationMetricsTests(unittest.TestCase):
         self.assertAlmostEqual(summary["macro_precision"], (2 / 3) / len(HAM10000_LABELS))
         self.assertAlmostEqual(summary["macro_recall"], 1 / len(HAM10000_LABELS))
         self.assertAlmostEqual(summary["macro_f1"], 0.8 / len(HAM10000_LABELS))
+
+    def test_covered_label_macro_metrics_exclude_uncovered_labels(self) -> None:
+        summary = summarize_metrics(
+            ["melanoma", "melanoma", "nevus", "nevus"],
+            ["melanoma", "nevus", "nevus", "basal_cell_carcinoma"],
+        )
+
+        self.assertEqual(summary["covered_labels"], ["melanoma", "nevus"])
+        self.assertAlmostEqual(summary["covered_label_macro_precision"], 0.75)
+        self.assertAlmostEqual(summary["covered_label_macro_recall"], 0.5)
+        self.assertAlmostEqual(summary["covered_label_balanced_accuracy"], 0.5)
+        self.assertAlmostEqual(summary["covered_label_macro_f1"], 7 / 12)
+
+    def test_prediction_distribution_counts_all_canonical_labels(self) -> None:
+        summary = summarize_metrics(
+            ["melanoma", "melanoma", "nevus", "nevus"],
+            ["melanoma", "nevus", "nevus", "basal_cell_carcinoma"],
+        )
+
+        distribution = summary["prediction_distribution"]
+        self.assertEqual(set(distribution), set(HAM10000_LABELS))
+        self.assertEqual(distribution["melanoma"], {"count": 1, "fraction": 0.25})
+        self.assertEqual(distribution["nevus"], {"count": 2, "fraction": 0.5})
+        self.assertEqual(
+            distribution["basal_cell_carcinoma"],
+            {"count": 1, "fraction": 0.25},
+        )
+        self.assertEqual(distribution["vascular_lesion"], {"count": 0, "fraction": 0.0})
+
+    def test_summary_accepts_pad_ufes_native_label_set(self) -> None:
+        summary = summarize_metrics(
+            ["squamous_cell_carcinoma", "seborrheic_keratosis", "melanoma"],
+            ["squamous_cell_carcinoma", "melanoma", "melanoma"],
+            labels=PAD_UFES_NATIVE_LABELS,
+        )
+
+        self.assertEqual(summary["labels"], list(PAD_UFES_NATIVE_LABELS))
+        self.assertEqual(
+            summary["covered_labels"],
+            ["melanoma", "squamous_cell_carcinoma", "seborrheic_keratosis"],
+        )
+        self.assertEqual(
+            set(summary["prediction_distribution"]),
+            set(PAD_UFES_NATIVE_LABELS),
+        )
+        self.assertEqual(summary["per_class"]["squamous_cell_carcinoma"]["true_positive"], 1)
 
     def test_rejects_mismatched_lengths(self) -> None:
         with self.assertRaises(ValueError):
