@@ -1,8 +1,9 @@
 """Evaluate frozen PAD-UFES-native checkpoints on the authorized DDI holdout.
 
-DDI is evaluated as a benign-versus-malignant stress/fairness benchmark. The
-six PAD-UFES-native probabilities are collapsed into a predeclared malignancy
-score; DDI is not treated as a six-class benchmark.
+DDI is evaluated as a benign-versus-malignant external clinical-domain stress
+benchmark with descriptive skin-tone subgroup reporting. The six PAD-UFES-
+native probabilities are collapsed into a predeclared malignancy score; DDI is
+not treated as a six-class or smartphone-capture benchmark.
 
 Outputs contain aggregate experimental metrics only. They are not medical
 conclusions and must remain on ignored paths.
@@ -42,6 +43,22 @@ SKIN_TONE_NAMES = {
     12: "FST_I_II",
     34: "FST_III_IV",
     56: "FST_V_VI",
+}
+DDI_CAPTURE_CONTEXT = {
+    "source": "retrospective_stanford_clinic_photographs_2010_2020",
+    "camera_device": "undocumented",
+    "photographer": "undocumented",
+    "smartphone_validation": False,
+    "patient_taken_validation": False,
+}
+DDI_WORKFLOW_ARTIFACT_CONTEXT = {
+    "audit_status": "not_performed",
+    "observed_examples": ["ruler", "skin_marker_ink"],
+    "not_established": [
+        "artifact_prevalence_by_binary_outcome",
+        "artifact_prevalence_by_skin_tone_group",
+        "in_situ_consumer_capture_status",
+    ],
 }
 MALIGNANT_PAD_UFES_LABELS = (
     "basal_cell_carcinoma",
@@ -193,6 +210,8 @@ def build_dataset_audit(rows: pd.DataFrame) -> dict[str, object]:
         "binary_support": binary_support,
         "skin_tone_support": skin_tone_support,
         "patient_grouping": "unavailable_in_supplied_metadata",
+        "capture_context": DDI_CAPTURE_CONTEXT,
+        "workflow_artifact_context": DDI_WORKFLOW_ARTIFACT_CONTEXT,
         "report_scope": "aggregate_counts_only",
     }
 
@@ -639,8 +658,9 @@ def run_evaluation(args: argparse.Namespace) -> dict[str, object] | None:
     report = {
         "created_at": datetime.now(UTC).isoformat(),
         "context": (
-            "Experimental external-holdout classification and fairness evidence only; "
-            "not a medical diagnosis or deployment-readiness result."
+            "Experimental external clinical-domain stress and descriptive skin-tone subgroup "
+            "evidence only; not smartphone-capture validation, a medical diagnosis, or a "
+            "deployment-readiness result."
         ),
         "dataset": audit,
         "model": {
@@ -653,7 +673,9 @@ def run_evaluation(args: argparse.Namespace) -> dict[str, object] | None:
             "preprocessing": EXPECTED_PREPROCESSING,
         },
         "protocol": {
-            "task": "DDI benign-versus-malignant external stress/fairness evaluation",
+            "task": "DDI benign-versus-malignant external clinical-domain stress evaluation",
+            "capture_context": DDI_CAPTURE_CONTEXT,
+            "workflow_artifact_context": DDI_WORKFLOW_ARTIFACT_CONTEXT,
             "malignant_probability": list(MALIGNANT_PAD_UFES_LABELS),
             "non_malignant_probability": list(NON_MALIGNANT_PAD_UFES_LABELS),
             "threshold": BINARY_THRESHOLD,
@@ -677,8 +699,17 @@ def run_evaluation(args: argparse.Namespace) -> dict[str, object] | None:
             "for repeated patients among the 656 images.",
             "The six-class closed-set model is forced into a binary score on diagnoses that "
             "extend beyond its PAD-UFES training taxonomy.",
+            "The source documentation and released metadata do not identify the camera device "
+            "or photographer, so DDI cannot be interpreted as smartphone or patient-taken "
+            "photo validation.",
+            "Visible clinical-workflow artifacts such as rulers and skin-marker ink were not "
+            "annotated or controlled; their prevalence may vary by outcome or skin-tone group.",
+            "No audit has established that every image is an in-situ consumer-representative "
+            "capture rather than procedure-related, post-procedure, ex-vivo, or otherwise "
+            "unclear imagery.",
             "Skin-tone comparisons are descriptive experimental evidence with finite subgroup "
-            "support, not proof of clinical fairness.",
+            "support and possible acquisition/workflow confounding, not proof of clinical "
+            "fairness.",
             "No DDI images were used for training, calibration, threshold selection, or model "
             "selection in this evaluation.",
         ],

@@ -57,6 +57,12 @@ class DdiMetadataTests(unittest.TestCase):
         self.assertEqual(audit["binary_support"], {"non_malignant": 3, "malignant": 3})
         self.assertEqual(audit["skin_tone_support"]["FST_I_II"]["malignant"], 1)
         self.assertEqual(audit["patient_grouping"], "unavailable_in_supplied_metadata")
+        self.assertEqual(audit["capture_context"]["camera_device"], "undocumented")
+        self.assertFalse(audit["capture_context"]["smartphone_validation"])
+        self.assertEqual(
+            audit["workflow_artifact_context"]["observed_examples"],
+            ["ruler", "skin_marker_ink"],
+        )
         self.assertNotIn("DDI_ID", json.dumps(audit))
 
     def test_rejects_duplicate_image_rows(self) -> None:
