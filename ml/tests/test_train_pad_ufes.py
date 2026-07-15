@@ -13,6 +13,7 @@ from ml.preprocessing import get_pad_ufes_transforms
 from ml.training.train_pad_ufes import (
     PadUfesDataset,
     add_macro_metrics,
+    build_balanced_sampler,
     build_lr_scheduler,
     build_transfer_model,
     load_training_split,
@@ -105,11 +106,32 @@ class PadUfesDatasetTests(unittest.TestCase):
 
 
 class TransferModelTests(unittest.TestCase):
+    def test_balanced_sampler_uses_inverse_class_frequency(self) -> None:
+        sampler = build_balanced_sampler([0, 0, 0, 1, 2], num_classes=3, seed=42)
+
+        self.assertEqual(sampler.num_samples, 5)
+        for actual, expected in zip(
+            sampler.weights.tolist(),
+            [1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0, 1.0, 1.0],
+            strict=True,
+        ):
+            self.assertAlmostEqual(actual, expected)
+
     def test_builds_six_class_resnet_without_downloading_test_weights(self) -> None:
         model = build_transfer_model(weights="none")
 
         self.assertEqual(model.fc.out_features, len(PAD_UFES_NATIVE_LABELS))
         self.assertTrue(all(parameter.requires_grad for parameter in model.parameters()))
+
+    def test_builds_supported_transfer_heads_without_downloading_weights(self) -> None:
+        for architecture in ("efficientnet_b0", "mobilenet_v3_large", "convnext_tiny"):
+            with self.subTest(architecture=architecture):
+                model = build_transfer_model(architecture=architecture, weights="none")
+
+                self.assertEqual(
+                    model.classifier[-1].out_features,
+                    len(PAD_UFES_NATIVE_LABELS),
+                )
 
     def test_add_macro_metrics_averages_all_native_classes(self) -> None:
         per_class = {

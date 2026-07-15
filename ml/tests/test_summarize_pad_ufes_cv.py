@@ -10,11 +10,13 @@ from ml.training.summarize_pad_ufes_cv import summarize_reports
 def fake_report(
     fold_index: int,
     *,
+    architecture: str = "resnet18",
     protocol: str = "patient_grouped_rotating_cv",
     augmentation_profile: str = "baseline",
     label_smoothing: float = 0.0,
     lr_schedule: str = "none",
     weight_decay: float = 1e-4,
+    imbalance_strategy: str = "inverse_frequency_loss",
 ) -> dict:
     size = len(PAD_UFES_NATIVE_LABELS)
     confusion = [[0 for _ in range(size)] for _ in range(size)]
@@ -28,7 +30,7 @@ def fake_report(
             "support": 1,
         }
     return {
-        "architecture": "resnet18",
+        "architecture": architecture,
         "input_mode": "image_only",
         "pretrained_weights": "imagenet",
         "selection_metric": "val_macro_f1",
@@ -41,6 +43,7 @@ def fake_report(
             "label_smoothing": label_smoothing,
             "lr_schedule": lr_schedule,
             "weight_decay": weight_decay,
+            "imbalance_strategy": imbalance_strategy,
         },
         "split_summary": {
             "protocol": protocol,
@@ -121,6 +124,37 @@ class SummarizePadUfesCrossValidationTests(unittest.TestCase):
             summary = summarize_reports(root, root / "summary.json", num_folds=5, seed=42)
 
         self.assertEqual(summary["augmentation_profile"], "baseline")
+        self.assertEqual(summary["imbalance_strategy"], "inverse_frequency_loss")
+
+    def test_verifies_imbalance_strategy(self) -> None:
+        with TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            write_reports(root, imbalance_strategy="balanced_sampler")
+
+            summary = summarize_reports(
+                root,
+                root / "summary.json",
+                num_folds=5,
+                seed=42,
+                imbalance_strategy="balanced_sampler",
+            )
+
+        self.assertEqual(summary["imbalance_strategy"], "balanced_sampler")
+
+    def test_verifies_architecture(self) -> None:
+        with TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            write_reports(root, architecture="efficientnet_b0")
+
+            summary = summarize_reports(
+                root,
+                root / "summary.json",
+                num_folds=5,
+                seed=42,
+                architecture="efficientnet_b0",
+            )
+
+        self.assertEqual(summary["architecture"], "efficientnet_b0")
 
     def test_verifies_regularized_training_configuration(self) -> None:
         configuration = {

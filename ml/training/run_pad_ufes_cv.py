@@ -12,7 +12,7 @@ from ml.training.prepare_pad_ufes import project_relative
 from ml.training.prepare_pad_ufes_cv import DEFAULT_FOLDS
 from ml.training.summarize_pad_ufes_cv import summarize_reports
 from ml.training.train import resolve_project_path
-from ml.training.train_pad_ufes import LR_SCHEDULES
+from ml.training.train_pad_ufes import ARCHITECTURES, IMBALANCE_STRATEGIES, LR_SCHEDULES
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SPLITS_DIR = PROJECT_ROOT / "ml" / "data" / "external_splits" / "pad_ufes_native_cv_224"
@@ -27,6 +27,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--splits-dir", type=Path, default=DEFAULT_SPLITS_DIR)
     parser.add_argument("--runs-root", type=Path, default=DEFAULT_RUNS_ROOT)
     parser.add_argument("--checkpoints-dir", type=Path, default=DEFAULT_CHECKPOINTS_DIR)
+    parser.add_argument("--architecture", choices=ARCHITECTURES, default="resnet18")
     parser.add_argument("--folds", type=int, default=DEFAULT_FOLDS)
     parser.add_argument("--epochs", type=int, default=15)
     parser.add_argument("--batch-size", type=int, default=32)
@@ -39,6 +40,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--label-smoothing", type=float, default=0.0)
     parser.add_argument("--lr-schedule", choices=LR_SCHEDULES, default="none")
+    parser.add_argument(
+        "--imbalance-strategy",
+        choices=IMBALANCE_STRATEGIES,
+        default="inverse_frequency_loss",
+    )
     parser.add_argument("--num-workers", type=int, default=0)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--device", choices=("auto", "cpu", "cuda"), default="cuda")
@@ -51,6 +57,7 @@ def build_training_command(
     split_csv: Path,
     checkpoint: Path,
     run_dir: Path,
+    architecture: str,
     epochs: int,
     batch_size: int,
     lr: float,
@@ -58,6 +65,7 @@ def build_training_command(
     augmentation_profile: str,
     label_smoothing: float,
     lr_schedule: str,
+    imbalance_strategy: str,
     num_workers: int,
     seed: int,
     device: str,
@@ -73,6 +81,8 @@ def build_training_command(
         str(checkpoint),
         "--run-dir",
         str(run_dir),
+        "--architecture",
+        architecture,
         "--weights",
         "imagenet",
         "--epochs",
@@ -89,6 +99,8 @@ def build_training_command(
         str(label_smoothing),
         "--lr-schedule",
         lr_schedule,
+        "--imbalance-strategy",
+        imbalance_strategy,
         "--num-workers",
         str(num_workers),
         "--seed",
@@ -130,6 +142,7 @@ def run_cross_validation(args: argparse.Namespace) -> None:
             split_csv=split_csv,
             checkpoint=checkpoint,
             run_dir=run_dir,
+            architecture=args.architecture,
             epochs=args.epochs,
             batch_size=args.batch_size,
             lr=args.lr,
@@ -137,6 +150,7 @@ def run_cross_validation(args: argparse.Namespace) -> None:
             augmentation_profile=args.augmentation_profile,
             label_smoothing=args.label_smoothing,
             lr_schedule=args.lr_schedule,
+            imbalance_strategy=args.imbalance_strategy,
             num_workers=args.num_workers,
             seed=args.seed,
             device=args.device,
@@ -167,9 +181,11 @@ def run_cross_validation(args: argparse.Namespace) -> None:
         runs_root / "summary.json",
         num_folds=args.folds,
         seed=args.seed,
+        architecture=args.architecture,
         augmentation_profile=args.augmentation_profile,
         label_smoothing=args.label_smoothing,
         lr_schedule=args.lr_schedule,
+        imbalance_strategy=args.imbalance_strategy,
         weight_decay=args.weight_decay,
     )
     macro_f1 = summary["fold_metrics"]["macro_f1"]
