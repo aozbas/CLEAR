@@ -129,6 +129,9 @@ DATASET_SOURCES: dict[str, DatasetSource] = {
         notes=[
             "Biopsy-proven clinical images with diverse skin-tone representation.",
             "Access and use terms restrict redistribution; keep local artifacts private.",
+            "Primary evaluation is binary benign-versus-malignant via ml.evaluation.ddi, "
+            "not the generic multiclass CLI.",
+            "Do not force the broader DDI diagnosis vocabulary into CLEAR's six classes.",
         ],
     ),
 }
