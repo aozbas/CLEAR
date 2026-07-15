@@ -120,15 +120,22 @@ DATASET_SOURCES: dict[str, DatasetSource] = {
     ),
     "ddi_clinical": DatasetSource(
         key="ddi_clinical",
-        name="Diverse Dermatology Images optional fairness split",
+        name="Diverse Dermatology Images external clinical stress split",
         source_url="https://ddi-dataset.github.io/",
-        split_type="clinical_fairness_optional",
+        split_type="clinical_stress_optional",
         labels=list(HAM10000_LABELS),
         partial_label_set=True,
         known_training_datasets=["DDI"],
         notes=[
             "Biopsy-proven clinical images with diverse skin-tone representation.",
+            "Capture device and photographer are undocumented; this is not smartphone or "
+            "patient-taken photo validation.",
+            "Visible rulers and skin-marker ink are unaudited workflow artifacts that may "
+            "confound outcome or skin-tone subgroup comparisons.",
             "Access and use terms restrict redistribution; keep local artifacts private.",
+            "Primary evaluation is binary benign-versus-malignant via ml.evaluation.ddi, "
+            "not the generic multiclass CLI.",
+            "Do not force the broader DDI diagnosis vocabulary into CLEAR's six classes.",
         ],
     ),
 }
