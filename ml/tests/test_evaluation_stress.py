@@ -4,7 +4,13 @@ from tempfile import TemporaryDirectory
 
 from PIL import Image
 
-from ml.evaluation.schema import HAM10000_LABELS, EvaluationExample, ModelMetadata, ModelPrediction
+from ml.evaluation.schema import (
+    HAM10000_LABELS,
+    PAD_UFES_NATIVE_LABELS,
+    EvaluationExample,
+    ModelMetadata,
+    ModelPrediction,
+)
 from ml.evaluation.stress import (
     PHONE_STRESS_VARIANTS,
     build_phone_stress_examples,
@@ -30,6 +36,26 @@ class RecordingAdapter:
         self.paths.append(Path(image_path))
         label = "melanoma" if "blur" in image_path.name else "nevus"
         return ModelPrediction(label=label, confidence=0.8, latency_ms=2.0)
+
+
+class NativeRecordingAdapter:
+    metadata = ModelMetadata(
+        name="native-fake",
+        source="test",
+        adapter="fake",
+        revision=None,
+        license=None,
+        labels=list(PAD_UFES_NATIVE_LABELS),
+        notes=[],
+    )
+
+    def predict_image(self, image_path: Path) -> ModelPrediction:
+        return ModelPrediction(
+            label="squamous_cell_carcinoma",
+            confidence=0.8,
+            latency_ms=2.0,
+            labels=PAD_UFES_NATIVE_LABELS,
+        )
 
 
 class EvaluationStressTests(unittest.TestCase):
@@ -83,6 +109,28 @@ class EvaluationStressTests(unittest.TestCase):
         self.assertEqual(result["aggregate"]["sample_count"], len(PHONE_STRESS_VARIANTS))
         self.assertEqual(result["aggregate"]["latency_p95_ms"], 2.0)
         self.assertEqual(len(adapter.paths), len(PHONE_STRESS_VARIANTS))
+
+    def test_evaluate_phone_stress_preserves_pad_ufes_native_labels(self) -> None:
+        with TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            image_path = root / "source.jpg"
+            self._write_image(image_path)
+            examples = [
+                EvaluationExample(
+                    image_path=image_path,
+                    label="squamous_cell_carcinoma",
+                    split="test",
+                    labels=PAD_UFES_NATIVE_LABELS,
+                ),
+            ]
+
+            result = evaluate_phone_stress(NativeRecordingAdapter(), examples, root / "stress")
+
+        self.assertEqual(result["aggregate"]["labels"], list(PAD_UFES_NATIVE_LABELS))
+        self.assertEqual(
+            result["aggregate"]["per_class"]["squamous_cell_carcinoma"]["recall"],
+            1.0,
+        )
 
 
 if __name__ == "__main__":

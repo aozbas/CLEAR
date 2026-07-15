@@ -11,7 +11,7 @@ from PIL import Image, ImageEnhance, ImageFilter
 
 from ml.evaluation.adapters.base import LesionModelAdapter
 from ml.evaluation.metrics import summarize_metrics
-from ml.evaluation.schema import EvaluationExample, ModelPrediction
+from ml.evaluation.schema import HAM10000_LABELS, EvaluationExample, ModelPrediction
 
 PHONE_STRESS_VARIANTS: Mapping[str, str] = {
     "blur": "Gaussian blur simulating slight camera shake.",
@@ -38,6 +38,7 @@ def build_phone_stress_examples(
 ) -> list[PhoneStressExample]:
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+    labels = _shared_labels(examples)
 
     stress_examples: list[PhoneStressExample] = []
     for index, example in enumerate(examples):
@@ -57,6 +58,7 @@ def build_phone_stress_examples(
                         image_path=output_path,
                         label=example.label,
                         split=example.split,
+                        labels=labels,
                     ),
                 )
             )
@@ -69,6 +71,7 @@ def evaluate_phone_stress(
     examples: Sequence[EvaluationExample],
     output_dir: Path,
 ) -> dict[str, object]:
+    labels = _shared_labels(examples)
     stress_examples = build_phone_stress_examples(examples, output_dir)
     variant_truth: dict[str, list[str]] = defaultdict(list)
     variant_predictions: dict[str, list[ModelPrediction]] = defaultdict(list)
@@ -88,12 +91,13 @@ def evaluate_phone_stress(
         metrics = _summarize_predictions(
             variant_truth.get(variant_key, []),
             predictions,
+            labels=labels,
         )
         metrics["description"] = description
         variants[variant_key] = metrics
 
     return {
-        "aggregate": _summarize_predictions(all_truth, all_predictions),
+        "aggregate": _summarize_predictions(all_truth, all_predictions, labels=labels),
         "variants": variants,
     }
 
@@ -101,11 +105,27 @@ def evaluate_phone_stress(
 def _summarize_predictions(
     truth: Sequence[str],
     predictions: Sequence[ModelPrediction],
+    *,
+    labels: tuple[str, ...],
 ) -> dict[str, object]:
-    metrics = summarize_metrics(truth, [prediction.label for prediction in predictions])
+    metrics = summarize_metrics(
+        truth,
+        [prediction.label for prediction in predictions],
+        labels=labels,
+    )
     metrics.update(_latency_metrics(predictions))
     metrics["sample_count"] = len(truth)
     return metrics
+
+
+def _shared_labels(examples: Sequence[EvaluationExample]) -> tuple[str, ...]:
+    if not examples:
+        return HAM10000_LABELS
+
+    labels = examples[0].labels
+    if any(example.labels != labels for example in examples[1:]):
+        raise ValueError("Phone-stress examples must use one shared label set.")
+    return labels
 
 
 def _latency_metrics(predictions: Sequence[ModelPrediction]) -> dict[str, float]:

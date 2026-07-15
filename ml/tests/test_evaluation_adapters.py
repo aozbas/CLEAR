@@ -292,15 +292,22 @@ class EvaluationAdapterTests(unittest.TestCase):
             root = Path(tmp_dir)
             image_path = root / "image.jpg"
             self._write_image(image_path)
+            download_kwargs = {}
 
+            def download_snapshot(**kwargs):
+                download_kwargs.update(kwargs)
+                return str(root / "snapshot")
+
+            open_clip_module = FakeOpenClipModule()
             adapter = OpenClipZeroShotAdapter(
                 model_id="example/openclip",
                 revision="abc123",
                 cache_dir=root / "cache",
                 license_name="mit",
-                open_clip_module=FakeOpenClipModule(),
+                open_clip_module=open_clip_module,
                 torch_module=torch,
                 device="cpu",
+                download_snapshot=download_snapshot,
             )
             prediction = adapter.predict_image(image_path)
 
@@ -309,12 +316,17 @@ class EvaluationAdapterTests(unittest.TestCase):
         self.assertEqual(set(prediction.probabilities or {}), set(HAM10000_LABELS))
         self.assertEqual(adapter.metadata.adapter, "open_clip_zero_shot")
         self.assertEqual(adapter.metadata.revision, "abc123")
+        self.assertEqual(download_kwargs["revision"], "abc123")
+        self.assertEqual(open_clip_module.model_name, f"local-dir:{root / 'snapshot'}")
 
     def test_open_clip_zero_shot_adapter_accepts_pad_ufes_native_labels(self) -> None:
         with TemporaryDirectory() as tmp_dir:
             root = Path(tmp_dir)
             image_path = root / "image.jpg"
             self._write_image(image_path)
+
+            def download_snapshot(**_kwargs):
+                return str(root / "snapshot")
 
             adapter = OpenClipZeroShotAdapter(
                 model_id="example/openclip",
@@ -325,6 +337,7 @@ class EvaluationAdapterTests(unittest.TestCase):
                 torch_module=torch,
                 device="cpu",
                 labels=PAD_UFES_NATIVE_LABELS,
+                download_snapshot=download_snapshot,
             )
             prediction = adapter.predict_image(image_path)
 

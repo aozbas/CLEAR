@@ -111,8 +111,9 @@ def canonical_label(diagnosis: str) -> str | None:
         return None
 
     label = DIRECT_DIAGNOSIS_MAP.get(normalized)
-    if label is not None:
-        validate_label(label)
+    if label is None:
+        raise ValueError(f"Unknown Derm7pt diagnosis: {diagnosis}")
+    validate_label(label)
     return label
 
 
