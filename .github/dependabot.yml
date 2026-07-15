@@ -5,42 +5,103 @@ updates:
     schedule:
       interval: weekly
     groups:
-      github-actions:
+      routine-github-actions:
+        applies-to: version-updates
         patterns:
           - "*"
+        update-types:
+          - minor
+          - patch
 
   - package-ecosystem: npm
     directory: /mobile
     schedule:
       interval: weekly
     groups:
-      mobile-dependencies:
+      mobile-runtime:
+        applies-to: version-updates
+        patterns:
+          - "expo"
+          - "expo-*"
+          - "react"
+          - "react-native"
+          - "@types/react"
+          - "typescript"
+      mobile-routine-dependencies:
+        applies-to: version-updates
         patterns:
           - "*"
+        exclude-patterns:
+          - "expo"
+          - "expo-*"
+          - "react"
+          - "react-native"
+          - "@types/react"
+          - "typescript"
+        update-types:
+          - minor
+          - patch
 
   - package-ecosystem: pip
     directory: /
     schedule:
       interval: weekly
-    groups:
-      python-dev-dependencies:
-        patterns:
-          - "*"
+    exclude-paths:
+      - "backend/**"
+      - "ml/**"
 
   - package-ecosystem: pip
     directory: /backend
     schedule:
       interval: weekly
     groups:
-      backend-dependencies:
+      backend-pytorch-runtime:
+        applies-to: version-updates
+        patterns:
+          - "torch"
+          - "torchvision"
+      backend-routine-dependencies:
+        applies-to: version-updates
         patterns:
           - "*"
+        exclude-patterns:
+          - "torch"
+          - "torchvision"
+        update-types:
+          - minor
+          - patch
 
   - package-ecosystem: pip
     directory: /ml
     schedule:
       interval: weekly
     groups:
-      ml-dependencies:
+      ml-pytorch-runtime:
+        applies-to: version-updates
+        patterns:
+          - "torch"
+          - "torchvision"
+      ml-transformers-runtime:
+        applies-to: version-updates
+        patterns:
+          - "transformers"
+          - "huggingface-hub"
+          - "safetensors"
+      ml-keras-evaluation-runtime:
+        applies-to: version-updates
+        patterns:
+          - "tensorflow"
+      ml-routine-dependencies:
+        applies-to: version-updates
         patterns:
           - "*"
+        exclude-patterns:
+          - "torch"
+          - "torchvision"
+          - "transformers"
+          - "huggingface-hub"
+          - "safetensors"
+          - "tensorflow"
+        update-types:
+          - minor
+          - patch
