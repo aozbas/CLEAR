@@ -1,0 +1,3 @@
+# Optional evaluation-only runtime for Keras `.h5` candidate models.
+# Do not install this for backend production inference.
+tensorflow==2.21.0

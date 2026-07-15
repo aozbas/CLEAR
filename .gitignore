@@ -10,6 +10,7 @@ __pycache__/
 # and define the dataset split for reproducibility.
 ml/data/raw/
 ml/data/processed/
+ml/data/external_splits/
 ml/runs/
 ml/model_cache/
 ml/models/*.pt
