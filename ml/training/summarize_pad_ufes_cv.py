@@ -31,11 +31,13 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--reports-root", type=Path, default=DEFAULT_REPORTS_ROOT)
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT_PATH)
+    parser.add_argument("--architecture", default="resnet18")
     parser.add_argument("--folds", type=int, default=DEFAULT_FOLDS)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--augmentation-profile", default="baseline")
     parser.add_argument("--label-smoothing", type=float, default=0.0)
     parser.add_argument("--lr-schedule", default="none")
+    parser.add_argument("--imbalance-strategy", default="inverse_frequency_loss")
     parser.add_argument("--weight-decay", type=float, default=1e-4)
     return parser.parse_args()
 
@@ -46,9 +48,11 @@ def summarize_reports(
     *,
     num_folds: int = DEFAULT_FOLDS,
     seed: int = 42,
+    architecture: str = "resnet18",
     augmentation_profile: str = "baseline",
     label_smoothing: float = 0.0,
     lr_schedule: str = "none",
+    imbalance_strategy: str = "inverse_frequency_loss",
     weight_decay: float = 1e-4,
 ) -> dict[str, object]:
     reports_root = resolve_project_path(Path(reports_root))
@@ -63,9 +67,11 @@ def summarize_reports(
             fold_index=fold_index,
             num_folds=num_folds,
             seed=seed,
+            architecture=architecture,
             augmentation_profile=augmentation_profile,
             label_smoothing=label_smoothing,
             lr_schedule=lr_schedule,
+            imbalance_strategy=imbalance_strategy,
             weight_decay=weight_decay,
         )
         reports.append(report)
@@ -114,12 +120,13 @@ def summarize_reports(
         "num_folds": num_folds,
         "seed": seed,
         "labels": list(PAD_UFES_NATIVE_LABELS),
-        "architecture": "resnet18",
+        "architecture": architecture,
         "input_mode": "image_only",
         "pretrained_weights": "imagenet",
         "augmentation_profile": augmentation_profile,
         "label_smoothing": label_smoothing,
         "lr_schedule": lr_schedule,
+        "imbalance_strategy": imbalance_strategy,
         "weight_decay": weight_decay,
         "fold_metrics": fold_metrics,
         "best_validation_macro_f1": _distribution(
@@ -154,13 +161,15 @@ def _validate_report(
     fold_index: int,
     num_folds: int,
     seed: int,
+    architecture: str,
     augmentation_profile: str,
     label_smoothing: float,
     lr_schedule: str,
+    imbalance_strategy: str,
     weight_decay: float,
 ) -> None:
     expected = {
-        "architecture": "resnet18",
+        "architecture": architecture,
         "input_mode": "image_only",
         "pretrained_weights": "imagenet",
         "selection_metric": "val_macro_f1",
@@ -182,12 +191,14 @@ def _validate_report(
         "label_smoothing": 0.0,
         "lr_schedule": "none",
         "weight_decay": 1e-4,
+        "imbalance_strategy": "inverse_frequency_loss",
     }
     training_expected = {
         "augmentation_profile": augmentation_profile,
         "label_smoothing": label_smoothing,
         "lr_schedule": lr_schedule,
         "weight_decay": weight_decay,
+        "imbalance_strategy": imbalance_strategy,
     }
     mismatches.extend(
         f"hyperparameters.{key}={hyperparameters.get(key, legacy_defaults[key])!r}"
@@ -269,9 +280,11 @@ def main() -> None:
         args.out,
         num_folds=args.folds,
         seed=args.seed,
+        architecture=args.architecture,
         augmentation_profile=args.augmentation_profile,
         label_smoothing=args.label_smoothing,
         lr_schedule=args.lr_schedule,
+        imbalance_strategy=args.imbalance_strategy,
         weight_decay=args.weight_decay,
     )
     fold_macro_f1 = summary["fold_metrics"]["macro_f1"]
