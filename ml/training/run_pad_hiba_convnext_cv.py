@@ -1095,7 +1095,7 @@ def run_experiment(args: argparse.Namespace) -> dict[str, object]:
         validate_report(report, fold_index=fold_index)
         print(
             f"fold_{fold_index}: best_epoch={report['best_epoch']} "
-            f"test_source_mean={report['test']['primary_source_mean_macro_f1']:.4f}"
+            "outer-test report held for the pooled five-fold summary"
         )
     summary = summarize_reports(runs_root, runs_root / "summary.json")
     print(
