@@ -1,17 +1,19 @@
 {
   "schema_version": 1,
   "provider": "ucsd_research_cluster",
-  "verified_at": "2026-07-22T17:57:16Z",
+  "verified_at": "2026-07-22T22:54:24Z",
   "fresh_pod": true,
   "model_execution_local": false,
   "milk10k_used": false,
   "cloud_resources_deleted": true,
-  "verified_commit": "8743e0fcaf993eb5acba660df06a2bfcedd775d3",
-  "verified_ml_tree": "986e959f6809facd7250ad7cf79a86d3ca9904f2",
+  "verified_commit": "ac5b82cd342e2e94dd48d4a66fe5da9c4954f58b",
+  "verified_ml_tree": "b7c07eb55f9380bcc4c9ac1d4309b3896530b96e",
   "runtime": {
-    "gpu": "NVIDIA A30",
-    "torch": "2.11.0+cu128",
-    "torchvision": "0.26.0+cu128"
+    "python": "3.11.9",
+    "gpu": "NVIDIA GeForce GTX 1080 Ti",
+    "execution_device": "cpu",
+    "torch": "2.11.0",
+    "torchvision": "0.26.0"
   },
   "input_locks": {
     "source_archive_sha256": "03b54253e7038642b37dacc140968014ed96682b186b81a0263273c7bc621634",
@@ -22,6 +24,7 @@
     "open_images_cohort_fingerprint": "fe5cfd2dc03a79a40eed07fc2b7cc79e28e176a1a5e82d72dc0e572ab56ee1b2"
   },
   "checkpoint_sha256": "12c7261b06e3da9d1639e5e2c11220837de5a69f972acf25a55c4a0ae31d99b8",
+  "verification_log_sha256": "2d8f93edba226c10413c058fc3848bc769f83e50647755a0997494a3944dfc77",
   "report_sha256": "79f53e4ff3c76f56d3375aee38c728a739220e8194e5c2b0bbc3f278e621e6ee",
   "supported_input_gate": {
     "protocol": "pad_hiba_open_images_supported_input_gate_v1",
@@ -30,39 +33,44 @@
     "decision": "enable"
   },
   "checks": {
-    "focused_tests": {
-      "status": "passed",
-      "count": 19
-    },
     "full_ml_tests": {
       "status": "passed",
-      "count": 215
+      "count": 150
     },
     "backend_tests": {
       "status": "passed",
       "count": 23
     },
-    "ruff_check": {
+    "ml_ruff_check": {
       "status": "passed"
     },
-    "ruff_format": {
+    "ml_ruff_format": {
       "status": "passed",
-      "file_count": 94
+      "file_count": 58
     },
-    "gate_report_reproduction": {
+    "direct_checkpoint_cpu_inference": {
       "status": "passed",
-      "byte_identical": true
+      "input_supported": false
     },
-    "supported_api_smoke": {
+    "backend_ruff_check": {
+      "status": "passed"
+    },
+    "backend_ruff_format": {
       "status": "passed",
-      "outcome": "classification_available"
+      "file_count": 14
     },
-    "unsupported_api_smoke": {
+    "backend_cpu_integration": {
       "status": "passed",
       "outcome": "unsupported_image",
       "label_hidden": true,
       "score_hidden": true,
       "cache_control": "no-store"
+    },
+    "checkpoint_sha256": {
+      "status": "passed"
+    },
+    "tracked_retired_name_scan": {
+      "status": "passed"
     }
   }
 }

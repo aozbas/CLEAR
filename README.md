@@ -66,6 +66,70 @@ weights, checkpoints, generated artifacts, third-party software, or third-party 
 materials remain subject to their own terms and must be identified separately before use or
 distribution.
 
+## Run the local phone demo
+
+The demo uses two local processes. Docker runs the FastAPI backend and the selected checkpoint on
+your computer. Expo serves the mobile bundle and displays a QR code that opens the app in Expo Go on
+a phone connected to the same trusted Wi-Fi network. The whole repository does not run on the
+phone, and no cloud deployment is required.
+
+Prerequisites:
+
+- Docker Desktop with Docker Compose
+- Node.js 20 or newer and npm
+- Expo Go on the phone
+- the separately provisioned checkpoint named
+  `pad_hiba_convnext_tiny_source_balanced_final_seed42.pt`
+
+The checkpoint is intentionally absent from Git. Its public redistribution rights are not yet
+resolved, so a fresh clone cannot perform classification until an authorized copy is placed at
+`ml/models/pad_hiba_convnext_tiny_source_balanced_final_seed42.pt`. Do not substitute a differently
+trained checkpoint under that filename; the inference boundary verifies the artifact metadata and
+fails closed when it does not match.
+
+From PowerShell at the repository root:
+
+```powershell
+Copy-Item backend/.env.example backend/.env
+Copy-Item mobile/.env.example mobile/.env
+```
+
+Find the computer's private IPv4 address with `ipconfig`. In `backend/.env`, append that exact
+address to `ALLOWED_HOSTS`. In `mobile/.env`, replace the example address in
+`EXPO_PUBLIC_API_URL` with the same address. For example:
+
+```dotenv
+ALLOWED_HOSTS=localhost,127.0.0.1,testserver,192.168.1.42
+EXPO_PUBLIC_API_URL=http://192.168.1.42:8000
+```
+
+Start the backend and confirm that the checkpoint is present without loading it:
+
+```powershell
+docker compose up --build
+Invoke-RestMethod http://127.0.0.1:8000/ready
+```
+
+In a second PowerShell window:
+
+```powershell
+Set-Location mobile
+npm ci
+npm run start:lan
+```
+
+Scan Expo's QR code with Expo Go. Before selecting an image, open
+`http://YOUR_COMPUTER_LAN_IP:8000/health` in the phone browser; a JSON health response proves the
+phone can reach the backend. If it cannot, verify both devices are on the same non-guest network,
+that the IP has not changed, and that the operating-system firewall allows private-network traffic
+to TCP port 8000. On Windows, mark the current Wi-Fi profile **Private** only when it is a trusted
+home or lab network (`Settings` -> `Network & internet` -> `Wi-Fi` -> current network), then allow
+Docker Desktop on private networks. Leave public or untrusted networks set to **Public**.
+
+This development connection is plain HTTP. Use it only on a trusted LAN and only with synthetic,
+public, or otherwise non-sensitive test images. A public demo requires HTTPS and the separate
+deployment controls below.
+
 ## Non-ML verification
 
 These checks are designed not to import, construct, or invoke an ML model:
@@ -84,14 +148,15 @@ npm run test:privacy
 npm run audit:high
 ```
 
-ML execution is intentionally excluded from local and GitHub-hosted verification. Project policy
-requires a fresh authorized UCSD cloud pod for model construction, inference, training, evaluation,
-or ML tests.
+Maintainer verification for ML code is intentionally excluded from local and GitHub-hosted checks;
+it uses a fresh authorized UCSD cloud pod. Contributors may run a compatible, lawfully obtained
+artifact in their own environment, subject to its terms, but test success is not evidence of medical
+validity or consumer-photo generalization.
 
-## Configuration and deployment
+## Public deployment
 
-Copy the relevant `.env.example` file and set only non-secret public mobile values there. Backend
-deployment must explicitly configure:
+A public deployment is optional and is not part of the local QR flow. If one is later approved, it
+must explicitly configure:
 
 - `MODEL_PATH` and `MODEL_VERSION`
 - `CORS_ORIGINS` as exact comma-separated origins (never `*` for a public deployment)

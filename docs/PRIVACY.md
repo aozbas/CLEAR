@@ -47,7 +47,7 @@ server secure.
 | Durable storage | No photo, result, user, scan, or history persistence code | Do not add request-body capture, object storage, database writes, or persistent volumes |
 | Logs | Container default disables access logs; application errors use fixed messages and never log image bytes | Verify proxy/platform logs do not record bodies, authorization headers, or long-lived identifiers; minimize IP log retention |
 | Transport | Client sends one raw image body to the configured backend | Require HTTPS with valid certificates; never deploy the HTTP development URL publicly |
-| Third parties | No Hosted database, analytics, crash-reporting, advertising, or account SDK is used in the public flow | Audit hosting, DNS, TLS, app-store, and observability providers and their retention terms |
+| Third parties | No database, analytics, crash-reporting, advertising, or account SDK is used in the public flow | Audit hosting, DNS, TLS, app-store, and observability providers and their retention terms |
 | Errors | Client receives fixed status-based copy without response bodies or trace details | Keep debug mode off and prevent infrastructure error pages from exposing internals |
 | Identifiers | No account, email, filename, device ID, or app-generated request ID is sent | Network providers may still observe IP address and timing; document and minimize that processing |
 

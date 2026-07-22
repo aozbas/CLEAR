@@ -1,20 +1,19 @@
 import unittest
 
-from ml.evaluation.schema import HAM10000_LABELS, PAD_UFES_NATIVE_LABELS, ModelPrediction
+from ml.evaluation.schema import PAD_UFES_NATIVE_LABELS, ModelPrediction
 
 
 class EvaluationSchemaTests(unittest.TestCase):
-    def test_canonical_labels_match_ham10000_order(self) -> None:
+    def test_canonical_labels_match_phone_photo_order(self) -> None:
         self.assertEqual(
-            HAM10000_LABELS,
+            PAD_UFES_NATIVE_LABELS,
             (
+                "actinic_keratosis",
+                "basal_cell_carcinoma",
                 "melanoma",
                 "nevus",
-                "basal_cell_carcinoma",
-                "actinic_keratosis",
-                "benign_keratosis",
-                "dermatofibroma",
-                "vascular_lesion",
+                "squamous_cell_carcinoma",
+                "seborrheic_keratosis",
             ),
         )
 

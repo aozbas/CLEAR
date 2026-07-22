@@ -9,26 +9,22 @@ from pathlib import Path
 
 import pandas as pd
 
-from ml.evaluation.schema import HAM10000_LABELS, PAD_UFES_NATIVE_LABELS, validate_label
+from ml.evaluation.schema import PAD_UFES_NATIVE_LABELS, validate_label
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_RAW_DIR = PROJECT_ROOT / "ml" / "data" / "raw" / "pad_ufes"
 DEFAULT_OUT_PATH = PROJECT_ROOT / "ml" / "data" / "external_splits" / "pad_ufes.csv"
 DEFAULT_SEED = 42
 
-PAD_UFES_TO_CANONICAL = {
+PAD_UFES_NATIVE_TO_CANONICAL = {
     "MEL": "melanoma",
     "NEV": "nevus",
     "BCC": "basal_cell_carcinoma",
     "ACK": "actinic_keratosis",
-}
-PAD_UFES_NATIVE_TO_CANONICAL = {
-    **PAD_UFES_TO_CANONICAL,
     "SCC": "squamous_cell_carcinoma",
     "SEK": "seborrheic_keratosis",
 }
 LABEL_MODES = {
-    "overlap": (PAD_UFES_TO_CANONICAL, ("SCC", "BOD", "BOW", "SEK"), HAM10000_LABELS),
     "native": (PAD_UFES_NATIVE_TO_CANONICAL, ("BOD", "BOW"), PAD_UFES_NATIVE_LABELS),
 }
 METADATA_FILENAMES = ("metadata.csv", "PAD-UFES-20.csv", "pad-ufes-20.csv")
@@ -49,11 +45,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--label-mode",
         choices=sorted(LABEL_MODES),
-        default="overlap",
-        help=(
-            "Use 'overlap' for the current HAM10000/CLEAR overlap labels or 'native' "
-            "for the PAD-UFES six-class phone-photo taxonomy."
-        ),
+        default="native",
+        help="Use the PAD-UFES six-class phone-photo taxonomy.",
     )
     parser.add_argument(
         "--split-strategy",
@@ -139,7 +132,7 @@ def prepare(
     raw_dir: Path,
     out_path: Path,
     *,
-    label_mode: str = "overlap",
+    label_mode: str = "native",
     split_strategy: str = "all-test",
     seed: int = DEFAULT_SEED,
 ) -> pd.DataFrame:

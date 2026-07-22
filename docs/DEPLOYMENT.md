@@ -2,14 +2,19 @@
 
 ## Current status
 
-The repository is prepared for a managed Cloud Run deployment, but no public service has been
-created. The configured model has not been executed outside the authorized UCSD research cluster.
-Public launch remains gated on an owner-selected Google Cloud project and billing account, an exact
-public origin, and explicit approval to run inference on Cloud Run rather than a fresh UCSD pod.
+The contributor demo runs locally: Docker hosts the backend and checkpoint on the contributor's
+computer, while Expo Go connects from a phone on the same trusted LAN. It does not require a cloud
+service. See the root README for that flow.
 
-This design does not add accounts, Hosted database, a database, analytics, image storage, or prediction
-history. The Cloud Storage bucket described below contains only the private model artifact; user
-uploads never enter it.
+The repository is also prepared for a possible managed Cloud Run deployment, but no public service
+has been created. The configured model has not been executed outside the authorized UCSD research
+cluster. A future public launch remains gated on an owner-selected Google Cloud project and billing
+account, an exact public origin, and explicit approval to run inference on Cloud Run rather than a
+fresh UCSD pod.
+
+This design does not add accounts, a database, analytics, image storage, or prediction history. The
+Cloud Storage bucket described below contains only the private model artifact; user uploads never
+enter it.
 
 ## Why this target
 

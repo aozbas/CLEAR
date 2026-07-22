@@ -5,15 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-HAM10000_LABELS = (
-    "melanoma",
-    "nevus",
-    "basal_cell_carcinoma",
-    "actinic_keratosis",
-    "benign_keratosis",
-    "dermatofibroma",
-    "vascular_lesion",
-)
 PAD_UFES_NATIVE_LABELS = (
     "actinic_keratosis",
     "basal_cell_carcinoma",
@@ -23,10 +14,9 @@ PAD_UFES_NATIVE_LABELS = (
     "seborrheic_keratosis",
 )
 LABEL_SETS = {
-    "ham10000": HAM10000_LABELS,
     "pad_ufes_native": PAD_UFES_NATIVE_LABELS,
 }
-KNOWN_LABELS = tuple(dict.fromkeys((*HAM10000_LABELS, *PAD_UFES_NATIVE_LABELS)))
+KNOWN_LABELS = PAD_UFES_NATIVE_LABELS
 VALID_SPLITS = ("train", "val", "test")
 
 

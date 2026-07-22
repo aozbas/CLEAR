@@ -22,11 +22,11 @@ body:
     attributes:
       label: Project phase
       options:
-        - Post-Phase-2 runtime/training setup
+        - Stateless local demo readiness
         - Phase 0 foundation
         - Phase 1 binary baseline
-        - Phase 2 HAM10000 7-class baseline
-        - Phase 3 multi-dataset expansion
+        - Phone-photo model research
+        - External generalization research
         - Phase 4 UX/responsibility polish
         - Unsure
     validations:
