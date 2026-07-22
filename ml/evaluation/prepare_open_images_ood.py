@@ -75,16 +75,16 @@ CATEGORY_PLAN = {
     "calibration": {
         "vehicles": ("Car", "Bicycle", "Boat", "Train"),
         "animals": ("Cat", "Dog", "Bird", "Horse"),
-        "food": ("Apple", "Banana", "Pizza", "Cake"),
-        "household": ("Chair", "Table", "Refrigerator", "Television"),
-        "outdoor_objects": ("House", "Tree", "Flower", "Traffic sign"),
+        "food": ("Bread", "Pasta", "Pizza", "Cake"),
+        "household": ("Chair", "Table", "Cabinetry", "Desk"),
+        "outdoor_objects": ("House", "Tree", "Flower", "Building"),
     },
     "evaluation": {
         "vehicles": ("Airplane", "Bus", "Motorcycle", "Truck"),
-        "animals": ("Elephant", "Bear", "Zebra", "Giraffe"),
+        "animals": ("Elephant", "Bear", "Zebra", "Lion"),
         "food": ("Orange", "Strawberry", "Sandwich", "Ice cream"),
         "household": ("Bed", "Couch", "Microwave oven", "Washing machine"),
-        "outdoor_objects": ("Street light", "Fountain", "Sculpture", "Clock"),
+        "outdoor_objects": ("Fountain", "Sculpture", "Castle", "Skyscraper"),
     },
 }
 MANIFEST_COLUMNS = (
