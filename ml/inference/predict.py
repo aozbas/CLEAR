@@ -23,6 +23,9 @@ CURRENT_SOURCE_CLASS_WEIGHTING = "equal_total_effective_weight_per_source_class_
 CURRENT_HIBA_VIEW_WEIGHTING = "equal_total_mass_per_lesion"
 CURRENT_CV_SUMMARY_SHA256 = "20dec905c9470dc34e467d95354ee78b5affaaa14d8ef4d7f13dad7f96a7da53"
 CURRENT_MANIFEST_FINGERPRINT = "23d3f41f18fc6d1082434fc049b6a7b7af07785df70b668bfb5ec51115747c5d"
+CURRENT_MANIFEST_IDENTITY_FINGERPRINT = (
+    "cdce4bb2e59f3ab462ba402fdb13f58caecc0fcfadda269e474a49bfec663828"
+)
 HAM10000_LABELS = [
     "melanoma",
     "nevus",
@@ -123,6 +126,7 @@ def get_checkpoint_preprocessing(checkpoint: Any, *, architecture: str) -> str:
             "source_class_weighting": CURRENT_SOURCE_CLASS_WEIGHTING,
             "hiba_view_weighting": CURRENT_HIBA_VIEW_WEIGHTING,
             "manifest_fingerprint": CURRENT_MANIFEST_FINGERPRINT,
+            "manifest_identity_fingerprint": CURRENT_MANIFEST_IDENTITY_FINGERPRINT,
             "cv_summary_sha256": CURRENT_CV_SUMMARY_SHA256,
             "cv_decision_all_pass": False,
             "selection_status": "owner_selected_despite_failed_preregistered_gates",

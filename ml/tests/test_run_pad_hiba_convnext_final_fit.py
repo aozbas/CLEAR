@@ -24,11 +24,13 @@ from ml.training.run_pad_hiba_convnext_cv import (
 )
 from ml.training.run_pad_hiba_convnext_final_fit import (
     EXPECTED_MANIFEST_FINGERPRINT,
+    EXPECTED_MANIFEST_IDENTITY_FINGERPRINT,
     EXPECTED_SELECTED_EPOCHS,
     FAILED_GATE_KEYS,
     FINAL_EPOCHS,
     build_final_fit_rows,
     load_locked_cv_summary,
+    manifest_identity_fingerprint,
     sha256_file,
 )
 
@@ -115,7 +117,11 @@ class PadHibaConvnextFinalFitTests(unittest.TestCase):
                 load_locked_cv_summary(path, expected_sha256=sha256_file(path))
 
     def test_final_fit_uses_each_approved_image_once_and_removes_split_roles(self) -> None:
-        rows = build_final_fit_rows(_manifests())
+        manifests = _manifests()
+        rows = build_final_fit_rows(
+            manifests,
+            expected_manifest_identity_fingerprint=manifest_identity_fingerprint(manifests.folds),
+        )
 
         self.assertEqual(len(rows), 2)
         self.assertEqual(set(rows["split"]), {"train"})
@@ -125,8 +131,21 @@ class PadHibaConvnextFinalFitTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             build_final_fit_rows(
                 _manifests(),
-                expected_manifest_fingerprint="0" * 64,
+                expected_manifest_identity_fingerprint="0" * 64,
             )
+
+    def test_manifest_identity_fingerprint_ignores_machine_specific_parent_paths(self) -> None:
+        manifests = _manifests()
+        moved = manifests.folds[0].copy()
+        moved["image_path"] = moved["image_path"].map(
+            lambda value: f"D:\\cloud-staging\\{Path(value).name}"
+        )
+
+        self.assertEqual(
+            manifest_identity_fingerprint(manifests.folds),
+            manifest_identity_fingerprint((moved,)),
+        )
+        self.assertEqual(len(EXPECTED_MANIFEST_IDENTITY_FINGERPRINT), 64)
 
 
 if __name__ == "__main__":

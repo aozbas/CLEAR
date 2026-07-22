@@ -61,6 +61,9 @@ DEFAULT_REPORT = (
 )
 EXPECTED_CV_SUMMARY_SHA256 = "20dec905c9470dc34e467d95354ee78b5affaaa14d8ef4d7f13dad7f96a7da53"
 EXPECTED_MANIFEST_FINGERPRINT = "23d3f41f18fc6d1082434fc049b6a7b7af07785df70b668bfb5ec51115747c5d"
+EXPECTED_MANIFEST_IDENTITY_FINGERPRINT = (
+    "cdce4bb2e59f3ab462ba402fdb13f58caecc0fcfadda269e474a49bfec663828"
+)
 EXPECTED_SELECTED_EPOCHS = (15, 8, 10, 11, 13)
 FINAL_EPOCHS = 11
 TRAINING_PROTOCOL = "pad_hiba_source_balanced_full_development_final_fit_v1"
@@ -169,12 +172,14 @@ def load_locked_cv_summary(
 def build_final_fit_rows(
     manifests: MultiSourceManifests,
     *,
-    expected_manifest_fingerprint: str = EXPECTED_MANIFEST_FINGERPRINT,
+    expected_manifest_identity_fingerprint: str = EXPECTED_MANIFEST_IDENTITY_FINGERPRINT,
 ) -> pd.DataFrame:
-    if manifests.fingerprint != expected_manifest_fingerprint:
+    observed_identity_fingerprint = manifest_identity_fingerprint(manifests.folds)
+    if observed_identity_fingerprint != expected_manifest_identity_fingerprint:
         raise ValueError(
-            "PAD/HIBA manifest fingerprint drifted: "
-            f"expected {expected_manifest_fingerprint}, observed {manifests.fingerprint}."
+            "PAD/HIBA manifest identity fingerprint drifted: "
+            f"expected {expected_manifest_identity_fingerprint}, "
+            f"observed {observed_identity_fingerprint}."
         )
     rows = manifests.folds[0].copy()
     if bool(rows["image_path"].astype(str).duplicated().any()):
@@ -190,6 +195,31 @@ def build_final_fit_rows(
         raise ValueError("Final-fit effective source counts do not match the locked manifests.")
     rows["split"] = "train"
     return rows.reset_index(drop=True)
+
+
+def manifest_identity_fingerprint(folds: tuple[pd.DataFrame, ...]) -> str:
+    """Hash cohort identities and fold roles without machine-specific path prefixes."""
+
+    digest = hashlib.sha256()
+    for fold_index, rows in enumerate(folds):
+        stable = rows[["split", "source", "image_path", "label", "unit_id", "view_mass"]].copy()
+        stable["image_key"] = (
+            stable["image_path"]
+            .astype(str)
+            .map(lambda value: value.replace("\\", "/").rsplit("/", 1)[-1])
+        )
+        stable["unit_key"] = stable.apply(
+            lambda row: row["image_key"] if row["source"] == "pad_ufes" else row["unit_id"],
+            axis=1,
+        )
+        stable = stable[
+            ["split", "source", "image_key", "label", "unit_key", "view_mass"]
+        ].sort_values(["source", "image_key"])
+        if bool(stable[["source", "image_key"]].duplicated().any()):
+            raise ValueError(f"fold_{fold_index} contains duplicate canonical image identities.")
+        digest.update(f"fold={fold_index}\n".encode())
+        digest.update(stable.to_csv(index=False, lineterminator="\n").encode())
+    return digest.hexdigest()
 
 
 def compact_training_metrics(metrics: Mapping[str, object]) -> dict[str, float]:
@@ -278,7 +308,8 @@ def run_final_fit(args: argparse.Namespace) -> dict[str, object]:
         "augmentation_profile": AUGMENTATION_PROFILE,
         "source_class_weighting": SOURCE_CLASS_WEIGHTING,
         "hiba_view_weighting": HIBA_VIEW_WEIGHTING,
-        "manifest_fingerprint": manifests.fingerprint,
+        "manifest_fingerprint": EXPECTED_MANIFEST_FINGERPRINT,
+        "manifest_identity_fingerprint": EXPECTED_MANIFEST_IDENTITY_FINGERPRINT,
         "cv_summary_sha256": EXPECTED_CV_SUMMARY_SHA256,
         "cv_decision_all_pass": False,
         "selection_status": "owner_selected_despite_failed_preregistered_gates",
@@ -304,7 +335,8 @@ def run_final_fit(args: argparse.Namespace) -> dict[str, object]:
         "pretrained_weights": PRETRAINED_WEIGHTS,
         "pretrained_weights_id": pretrained_weights_id(ARCHITECTURE, PRETRAINED_WEIGHTS),
         "preprocessing": PREPROCESSING,
-        "manifest_fingerprint": manifests.fingerprint,
+        "manifest_fingerprint": EXPECTED_MANIFEST_FINGERPRINT,
+        "manifest_identity_fingerprint": EXPECTED_MANIFEST_IDENTITY_FINGERPRINT,
         "cv_summary": project_relative(cv_summary_path),
         "cv_summary_sha256": EXPECTED_CV_SUMMARY_SHA256,
         "cv_decision_rules": cv_summary["decision_rules"],
