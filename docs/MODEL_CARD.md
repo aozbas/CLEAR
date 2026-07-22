@@ -20,6 +20,19 @@ Static backend and inference configuration currently selects:
 The repository does not track the model weights. This wiring was determined by static code and
 configuration inspection; this documentation does not load or evaluate the model.
 
+## Training-data and checkpoint rights boundary
+
+The official [HAM10000 dataset record](https://doi.org/10.7910/DVN/DBW86T) designates the dataset
+under the Creative Commons Attribution-NonCommercial 4.0 International terms. The accompanying
+[dataset paper](https://doi.org/10.1038/sdata.2018.161) should be cited when this training source is
+described.
+
+Those dataset terms are separate from any license selected for CLEAR's source code. A code license
+does not relicense HAM10000, any other dataset, or a trained checkpoint. Before publicly hosting or
+distributing the configured checkpoint, the project owner must document its exact provenance,
+confirm that the intended use complies with all source terms, retain required attribution, and keep
+the use noncommercial unless separate permission supports a broader use.
+
 ## Central limitation
 
 HAM10000 is a dermoscopy-domain dataset. The public demo accepts ordinary JPEG or PNG images, but
