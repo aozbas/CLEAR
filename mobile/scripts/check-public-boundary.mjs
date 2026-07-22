@@ -60,6 +60,10 @@ const requiredApiControls = [
   "removeTemporaryPickerFile",
   "errorMessageForStatus",
   "ensureSecureApiBase",
+  '"classification_available"',
+  '"classifier_uncertain"',
+  '"poor_image_quality"',
+  '"unsupported_image"',
 ];
 for (const control of requiredApiControls) {
   if (!apiSource.includes(control)) violations.push(`src/lib/api.ts is missing ${control}`);
@@ -76,6 +80,9 @@ if (
   )
 ) {
   violations.push("DemoScanScreen.tsx can publish a superseded upload result");
+}
+if (!demoSource.includes("No classification shown")) {
+  violations.push("DemoScanScreen.tsx does not render an explicit abstention state");
 }
 if (appConfig.includes("share them with your friends")) {
   violations.push("app.json still uses the default image-picker permission copy");

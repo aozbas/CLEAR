@@ -1,8 +1,9 @@
 # CLEAR
 
 CLEAR is an educational and technical skin-lesion image-classification project. Its public product
-surface is a privacy-first, stateless demo: one image request produces one experimental
-classification, with no account, image library, saved result, or prediction history.
+surface is a privacy-first, stateless demo: one image request produces one experimental outcome,
+which may be a classification or an explicit abstention, with no account, image library, saved
+result, or prediction history.
 
 It is **not a medical device**. Its output is not a diagnosis, should not reassure or alarm anyone,
 and must not be used for treatment or other medical decisions.
@@ -10,9 +11,11 @@ and must not be used for treatment or other medical decisions.
 ## Public demo boundary
 
 The Expo mobile app sends a raw JPEG or PNG body to `POST /predictions/demo`. The FastAPI backend
-validates the upload in memory, invokes the configured classifier, and returns one JSON result.
-Application code does not persist the submitted bytes or result. The app deletes its own temporary
-picker-cache result after the request and never deletes an original from the user's photo library.
+validates the upload in memory, rejects conservatively defined unusable images before inference,
+invokes the configured classifier for remaining inputs, and returns one JSON result. A cloud-verified
+supported-input gate suppresses the category and score for rejected inputs. Application code does
+not persist the submitted bytes or result. The app deletes its own temporary picker-cache result
+after the request and never deletes an original from the user's photo library.
 
 The public app and API intentionally have no authentication, user profiles, database client,
 storage bucket, scan insert, or result-history route. See [the privacy boundary](docs/PRIVACY.md) for

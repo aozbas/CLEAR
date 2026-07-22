@@ -14,11 +14,15 @@ runtime facts must be verified before a public deployment.
    that file as binary content; the app does not create an account or application record.
 3. The app sends the raw bytes over the configured API connection as `image/jpeg` or `image/png`.
    Production must use HTTPS. No filename, email, token, or account identifier is sent.
-4. The backend rejects unsupported, empty, malformed, mismatched, oversized, or over-pixel-limit
-   content while streaming and validating it in memory. The endpoint does not use multipart upload
-   spooling or write an application temporary file.
-5. The backend passes the validated bytes to the configured inference adapter, then returns one
-   experimental result. It has no database, object-storage, analytics, or prediction-history client.
+4. The backend rejects empty, malformed, mismatched, oversized, over-pixel-limit, too-small,
+   effectively blank, nearly uniform, or extreme-exposure content while streaming and validating it
+   in memory. The endpoint does not use multipart upload spooling or write an application temporary
+   file. The conservative quality checks run before model invocation.
+5. The backend passes the remaining validated bytes to the configured inference adapter. The
+   adapter may suppress its category and score when the cloud-verified supported-input gate rejects
+   the image; no internal gate score or threshold enters the API response. The backend then returns
+   one experimental outcome. It has no database, object-storage, analytics, or prediction-history
+   client.
 6. After the request, the app releases the preview and idempotently deletes the picker result only
    when its URI is inside CLEAR's app-cache directory. The JSON result remains in component memory
    until the user clears or leaves the screen. A process crash can leave an OS-managed cache file

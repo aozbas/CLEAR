@@ -1,5 +1,9 @@
 import unittest
+from unittest.mock import Mock, patch
 
+import torch
+
+import ml.inference.predict as prediction_module
 from ml.inference.predict import (
     CURRENT_CV_SUMMARY_SHA256,
     CURRENT_HIBA_VIEW_WEIGHTING,
@@ -12,11 +16,18 @@ from ml.inference.predict import (
     HAM10000_LABELS,
     PAD_HIBA_LABELS,
     PREPROCESSING,
+    SUPPORTED_INPUT_GATE_COHORT_FINGERPRINT,
+    SUPPORTED_INPUT_GATE_METHOD,
+    SUPPORTED_INPUT_GATE_PROTOCOL,
+    SUPPORTED_INPUT_GATE_REPORT_SHA256,
+    SUPPORTED_INPUT_GATE_THRESHOLD,
+    SUPPORTED_INPUT_GATE_VERSION,
     InvalidImageError,
     get_checkpoint_architecture,
     get_checkpoint_labels,
     get_checkpoint_preprocessing,
     load_image,
+    supported_input_score,
 )
 
 
@@ -119,6 +130,69 @@ class CheckpointLabelTests(unittest.TestCase):
     def test_load_image_rejects_unreadable_bytes(self) -> None:
         with self.assertRaises(InvalidImageError):
             load_image(b"not an image")
+
+
+class SupportedInputGateTests(unittest.TestCase):
+    def test_gate_contract_matches_the_frozen_aggregate_report(self) -> None:
+        self.assertEqual(
+            SUPPORTED_INPUT_GATE_PROTOCOL,
+            "pad_hiba_open_images_supported_input_gate_v1",
+        )
+        self.assertEqual(SUPPORTED_INPUT_GATE_METHOD, "logsumexp")
+        self.assertEqual(SUPPORTED_INPUT_GATE_THRESHOLD, 4.4970903396606445)
+        self.assertEqual(
+            SUPPORTED_INPUT_GATE_COHORT_FINGERPRINT,
+            "fe5cfd2dc03a79a40eed07fc2b7cc79e28e176a1a5e82d72dc0e572ab56ee1b2",
+        )
+        self.assertEqual(
+            SUPPORTED_INPUT_GATE_REPORT_SHA256,
+            "79f53e4ff3c76f56d3375aee38c728a739220e8194e5c2b0bbc3f278e621e6ee",
+        )
+        self.assertEqual(
+            SUPPORTED_INPUT_GATE_VERSION,
+            "pad-hiba-open-images-supported-input-gate-v1-79f53e4ff3c76f56",
+        )
+
+    def test_supported_input_score_is_logsumexp(self) -> None:
+        logits = torch.tensor([[1.0, 2.0], [3.0, -1.0]])
+
+        score = supported_input_score(logits)
+
+        torch.testing.assert_close(score, torch.logsumexp(logits, dim=1))
+
+    def test_predict_suppresses_label_and_score_for_an_unsupported_input(self) -> None:
+        result = self._predict_with_logits(torch.zeros((1, 6)))
+
+        self.assertEqual(
+            result,
+            {
+                "label": None,
+                "confidence": None,
+                "input_supported": False,
+                "input_gate_version": SUPPORTED_INPUT_GATE_VERSION,
+            },
+        )
+
+    def test_predict_returns_classification_fields_for_a_supported_input(self) -> None:
+        result = self._predict_with_logits(torch.tensor([[5.0, 0.0, 0.0, 0.0, 0.0, 0.0]]))
+
+        self.assertEqual(result["label"], PAD_HIBA_LABELS[0])
+        self.assertGreater(result["confidence"], 0.0)
+        self.assertTrue(result["input_supported"])
+        self.assertEqual(result["input_gate_version"], SUPPORTED_INPUT_GATE_VERSION)
+
+    @staticmethod
+    def _predict_with_logits(logits: torch.Tensor) -> dict[str, object]:
+        model = Mock(return_value=logits)
+        transform = Mock(return_value=torch.zeros((3, 224, 224)))
+        with (
+            patch.object(prediction_module, "load_model", return_value=model),
+            patch.object(prediction_module, "load_image", return_value=object()),
+            patch.object(prediction_module, "get_transforms", return_value=transform),
+            patch.object(prediction_module, "_MODEL_LABELS", PAD_HIBA_LABELS),
+            patch.object(prediction_module, "_MODEL_PREPROCESSING", PREPROCESSING),
+        ):
+            return prediction_module.predict(b"synthetic", device="cpu")
 
 
 if __name__ == "__main__":
