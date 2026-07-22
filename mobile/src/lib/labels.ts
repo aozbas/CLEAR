@@ -1,73 +1,23 @@
-type LabelInfo = {
-  display: string;
-  tag: string;
-  closerLook: boolean;
-};
-
-const LABELS: Record<string, LabelInfo> = {
-  suspicious: {
-    display: "Needs a closer look",
-    tag: "Closer look",
-    closerLook: true,
-  },
-  non_suspicious: {
-    display: "Low concern",
-    tag: "Low concern",
-    closerLook: false,
-  },
-  melanoma: {
-    display: "Melanoma",
-    tag: "Melanoma",
-    closerLook: true,
-  },
-  nevus: {
-    display: "Common mole",
-    tag: "Nevus",
-    closerLook: false,
-  },
-  basal_cell_carcinoma: {
-    display: "Basal cell carcinoma",
-    tag: "BCC",
-    closerLook: true,
-  },
-  actinic_keratosis: {
-    display: "Actinic keratosis",
-    tag: "AK",
-    closerLook: true,
-  },
-  benign_keratosis: {
-    display: "Benign keratosis",
-    tag: "BKL",
-    closerLook: false,
-  },
-  dermatofibroma: {
-    display: "Dermatofibroma",
-    tag: "DF",
-    closerLook: false,
-  },
-  vascular_lesion: {
-    display: "Vascular lesion",
-    tag: "Vascular",
-    closerLook: false,
-  },
+const LABELS: Record<string, string> = {
+  melanoma: "Melanoma category",
+  nevus: "Nevus category",
+  basal_cell_carcinoma: "Basal cell carcinoma category",
+  actinic_keratosis: "Actinic keratosis category",
+  benign_keratosis: "Benign keratosis category",
+  dermatofibroma: "Dermatofibroma category",
+  vascular_lesion: "Vascular lesion category",
 };
 
 export function displayLabel(label: string | null | undefined): string {
-  if (!label) return "Result unavailable";
-  return LABELS[label]?.display ?? "Result unavailable";
+  if (!label) return "No category displayed";
+  return LABELS[label] ?? "Unknown model category";
 }
 
-export function tagLabel(label: string | null | undefined): string {
-  if (!label) return "Unknown";
-  return LABELS[label]?.tag ?? "Unknown";
+export function isKnownLabel(label: string | null | undefined): boolean {
+  return typeof label === "string" && label in LABELS;
 }
 
-export function isCloserLook(label: string | null | undefined): boolean {
-  if (!label) return false;
-  return LABELS[label]?.closerLook ?? false;
-}
-
-export function formatConfidence(confidence: number | null | undefined): string {
-  if (typeof confidence !== "number" || Number.isNaN(confidence)) return "--";
-  return confidence.toFixed(2);
+export function formatModelScore(score: number | null | undefined): string {
+  if (typeof score !== "number" || Number.isNaN(score)) return "--";
+  return score.toFixed(2);
 }
