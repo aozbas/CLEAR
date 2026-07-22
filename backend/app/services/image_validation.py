@@ -1,13 +1,18 @@
 import warnings
 from io import BytesIO
 
-from PIL import Image, UnidentifiedImageError
+from PIL import Image, ImageStat, UnidentifiedImageError
 from starlette.requests import ClientDisconnect, Request
 
 ALLOWED_IMAGE_TYPES = {
     "image/jpeg": "JPEG",
     "image/png": "PNG",
 }
+MIN_IMAGE_SIDE = 64
+MIN_LUMINANCE_MEAN = 3.0
+MAX_LUMINANCE_MEAN = 252.0
+MIN_LUMINANCE_STANDARD_DEVIATION = 1.0
+QUALITY_THUMBNAIL_SIZE = (64, 64)
 
 
 class ImageRequestError(ValueError):
@@ -24,6 +29,10 @@ class UnsupportedImageTypeError(ImageRequestError):
 
 class MalformedImageError(ImageRequestError):
     """Raised when submitted bytes are not a complete decodable image."""
+
+
+class PoorImageQualityError(ImageRequestError):
+    """Raised when a valid image has too little visible information for the demo."""
 
 
 def normalized_content_type(value: str | None) -> str:
@@ -86,7 +95,13 @@ def validate_image_bytes(image_bytes: bytes, *, expected_format: str, max_pixels
                 if width * height > max_pixels:
                     raise ImageTooLargeError("The image exceeds the pixel limit.")
                 image.load()
-    except (UnsupportedImageTypeError, ImageTooLargeError, MalformedImageError):
+                validate_image_quality(image)
+    except (
+        UnsupportedImageTypeError,
+        ImageTooLargeError,
+        MalformedImageError,
+        PoorImageQualityError,
+    ):
         raise
     except Image.DecompressionBombWarning as exc:
         raise ImageTooLargeError("The image exceeds the pixel limit.") from exc
@@ -94,3 +109,23 @@ def validate_image_bytes(image_bytes: bytes, *, expected_format: str, max_pixels
         raise ImageTooLargeError("The image exceeds the pixel limit.") from exc
     except (UnidentifiedImageError, OSError, SyntaxError, ValueError) as exc:
         raise MalformedImageError("The image is malformed or incomplete.") from exc
+
+
+def validate_image_quality(image: Image.Image) -> None:
+    width, height = image.size
+    if min(width, height) < MIN_IMAGE_SIDE:
+        raise PoorImageQualityError("The image is too small for this experiment.")
+
+    luminance = image.convert("L")
+    luminance.thumbnail(QUALITY_THUMBNAIL_SIZE, Image.Resampling.BILINEAR)
+    statistics = ImageStat.Stat(luminance)
+    mean = float(statistics.mean[0])
+    standard_deviation = float(statistics.stddev[0])
+    if (
+        mean <= MIN_LUMINANCE_MEAN
+        or mean >= MAX_LUMINANCE_MEAN
+        or standard_deviation <= MIN_LUMINANCE_STANDARD_DEVIATION
+    ):
+        raise PoorImageQualityError(
+            "The image does not contain enough visible detail for this experiment."
+        )

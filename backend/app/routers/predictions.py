@@ -5,11 +5,12 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from ..config import settings
-from ..models.predictions import ExperimentalClassificationResponse
+from ..models.predictions import ExperimentalClassificationResponse, PredictionOutcome
 from ..services.image_validation import (
     ImageRequestError,
     ImageTooLargeError,
     MalformedImageError,
+    PoorImageQualityError,
     UnsupportedImageTypeError,
     read_validated_image_body,
 )
@@ -56,6 +57,20 @@ def _validated_prediction(result: Mapping[str, Any]) -> tuple[str, float]:
     return label, numeric_score
 
 
+def _abstention(
+    outcome: PredictionOutcome,
+    message: str,
+) -> ExperimentalClassificationResponse:
+    return ExperimentalClassificationResponse(
+        outcome=outcome,
+        label=None,
+        model_score=None,
+        should_retry=True,
+        message=message,
+        model_version=settings.model_version,
+    )
+
+
 @router.post(
     "/demo",
     response_model=ExperimentalClassificationResponse,
@@ -84,6 +99,14 @@ async def create_demo_prediction(
             prediction_timeout_seconds=settings.prediction_timeout_seconds,
         )
         label, score = _validated_prediction(raw_result)
+    except PoorImageQualityError:
+        return _abstention(
+            "poor_image_quality",
+            (
+                "No result is shown because the image does not contain enough visible detail. "
+                "Try a clear, close-up photo of one visible skin spot."
+            ),
+        )
     except ImageTooLargeError as exc:
         raise HTTPException(status_code=status.HTTP_413_CONTENT_TOO_LARGE, detail=str(exc)) from exc
     except (UnsupportedImageTypeError, MalformedImageError) as exc:
@@ -118,18 +141,16 @@ async def create_demo_prediction(
         ) from exc
 
     if score < settings.min_prediction_confidence:
-        return ExperimentalClassificationResponse(
-            label=None,
-            model_score=None,
-            should_retry=True,
-            message=(
-                "No result is shown because the model score was below the display threshold. "
-                "Try a clear, well-lit JPEG or PNG."
+        return _abstention(
+            "classifier_uncertain",
+            (
+                "No result is shown because the experimental classifier was uncertain. "
+                "Try a clear, close-up photo of one visible skin spot."
             ),
-            model_version=settings.model_version,
         )
 
     return ExperimentalClassificationResponse(
+        outcome="classification_available",
         label=label,
         model_score=score,
         should_retry=False,
