@@ -21,13 +21,13 @@ jobs:
           python-version-file: .python-version
           cache: pip
           cache-dependency-path: |
-            backend/requirements.txt
+            backend/requirements-api.txt
             requirements-dev.txt
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r backend/requirements.txt
+          python -m pip install -r backend/requirements-api.txt
           python -m pip install -r requirements-dev.txt
 
       - name: Ruff check
@@ -36,5 +36,21 @@ jobs:
       - name: Ruff format check
         run: python -m ruff format --check backend
 
-      - name: Test
-        run: python -m unittest discover -s backend/tests
+      - name: Test without importing ML runtimes
+        run: |
+          python - <<'PY'
+          import sys
+          import unittest
+
+          suite = unittest.defaultTestLoader.discover("backend/tests")
+          result = unittest.TextTestRunner().run(suite)
+          forbidden = [
+              name
+              for name in sys.modules
+              if name == "ml" or name.startswith("ml.") or name == "torch" or name.startswith("torch.")
+          ]
+          if forbidden:
+              raise SystemExit(f"API-only tests imported forbidden ML modules: {forbidden[:10]}")
+          if not result.wasSuccessful():
+              raise SystemExit(1)
+          PY

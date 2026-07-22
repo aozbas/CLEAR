@@ -13,6 +13,11 @@ mobile/.expo
 mobile
 docs
 supabase
+AGENTS.md
+PROJECT.md
+staging
+cloud-staging
+artifacts
 
 .env
 .env.*
@@ -38,10 +43,23 @@ credentials.json
 secrets.json
 .eas/credentials*
 
-ml/data/raw
-ml/data/processed
+ml/data
+ml/runs
+ml/model_cache
 ml/notebooks
 ml/models/*.pt
+ml/models/**/*.pt
+ml/models/**/*.pth
+ml/models/**/*.safetensors
+ml/models/**/*.bin
+**/*.pt
+**/*.pth
+**/*.safetensors
+**/*.ckpt
+**/*.onnx
+**/.pytest_cache
+**/.ruff_cache
+**/__pycache__
 *.log
 .gstack
 

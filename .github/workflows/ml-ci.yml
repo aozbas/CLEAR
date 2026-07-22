@@ -12,29 +12,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check out repository
+      - name: Check out repository without executing ML code
         uses: actions/checkout@v7
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
         with:
-          python-version-file: .python-version
-          cache: pip
-          cache-dependency-path: |
-            ml/requirements.txt
-            requirements-dev.txt
+          fetch-depth: 0
 
-      - name: Install dependencies
+      - name: Enforce fresh-UCSD-pod execution policy
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install -r ml/requirements.txt
-          python -m pip install -r requirements-dev.txt
+          if [[ -n "$BASE_SHA" && ! "$BASE_SHA" =~ ^0+$ ]]; then
+            changed_files="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")"
+          else
+            changed_files="$(git show --pretty='' --name-only "$HEAD_SHA")"
+          fi
 
-      - name: Ruff check
-        run: python -m ruff check ml
+          if grep -qE '^ml/' <<<"$changed_files"; then
+            echo "::error::ML files changed. Project policy requires verification on a fresh UCSD cloud pod; GitHub-hosted and local ML execution are disabled."
+            exit 1
+          fi
 
-      - name: Ruff format check
-        run: python -m ruff format --check ml
-
-      - name: Test
-        run: python -m unittest discover -s ml/tests
+          echo "No ML files changed. No model code was imported, constructed, or invoked."
