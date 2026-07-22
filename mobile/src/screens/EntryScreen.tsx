@@ -4,31 +4,32 @@ import { theme } from "../theme";
 
 type Props = {
   onDemo: () => void;
-  onSignIn: () => void;
 };
 
-export default function EntryScreen({ onDemo, onSignIn }: Props) {
+export default function EntryScreen({ onDemo }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.content}>
         <Text style={styles.wordmark}>CLEAR</Text>
-        <Text style={styles.title}>Private demo mode</Text>
+        <Text style={styles.title}>Stateless experimental demo</Text>
         <Text style={styles.body}>
-          Try a one-time experimental classification without creating an account.
+          Submit one JPEG or PNG and receive one experimental model category. No account is
+          available or required.
         </Text>
         <Text style={styles.body}>
-          Demo mode does not save your photo, result, or scan history.
+          CLEAR does not create a profile or retain the submitted image or result in application
+          storage. Photos already in your library are never deleted.
+        </Text>
+        <Text style={styles.body}>
+          CLEAR is not a medical device, cannot diagnose disease, and must not be used for medical
+          decisions or reassurance.
         </Text>
 
         <Pressable
           style={({ pressed }) => [styles.primary, pressed && styles.primaryPressed]}
           onPress={onDemo}
         >
-          <Text style={styles.primaryLabel}>Try demo</Text>
-        </Pressable>
-
-        <Pressable style={styles.secondary} onPress={onSignIn}>
-          <Text style={styles.secondaryLabel}>Sign in for private history</Text>
+          <Text style={styles.primaryLabel}>Try experimental demo</Text>
         </Pressable>
       </View>
     </View>
@@ -75,6 +76,4 @@ const styles = StyleSheet.create({
   },
   primaryPressed: { backgroundColor: theme.colors.accentPressed },
   primaryLabel: { color: "#FFFFFF", fontSize: 15, fontWeight: "500" },
-  secondary: { paddingVertical: 14, alignItems: "center", minHeight: 44 },
-  secondaryLabel: { color: theme.colors.muted, fontSize: 15, fontWeight: "500" },
 });

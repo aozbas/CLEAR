@@ -4,6 +4,16 @@
     "slug": "clear",
     "version": "0.1.0",
     "orientation": "portrait",
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow CLEAR to select one image for transient experimental classification.",
+          "cameraPermission": "Allow CLEAR to take one image for transient experimental classification.",
+          "microphonePermission": false
+        }
+      ]
+    ],
     "ios": { "supportsTablet": true },
     "android": {}
   }

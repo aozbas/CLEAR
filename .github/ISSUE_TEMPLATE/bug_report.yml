@@ -12,7 +12,6 @@ body:
         - Mobile
         - Backend
         - ML
-        - Supabase
         - CI
         - Docs/private notes
     validations:

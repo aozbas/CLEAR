@@ -1,0 +1,78 @@
+# CLEAR
+
+CLEAR is an educational and technical skin-lesion image-classification project. Its public product
+surface is a privacy-first, stateless demo: one image request produces one experimental
+classification, with no account, image library, saved result, or prediction history.
+
+It is **not a medical device**. Its output is not a diagnosis, should not reassure or alarm anyone,
+and must not be used for treatment or other medical decisions.
+
+## Public demo boundary
+
+The Expo mobile app sends a raw JPEG or PNG body to `POST /predictions/demo`. The FastAPI backend
+validates the upload in memory, invokes the configured classifier, and returns one JSON result.
+Application code does not persist the submitted bytes or result. The app deletes its own temporary
+picker-cache result after the request and never deletes an original from the user's photo library.
+
+The public app and API intentionally have no authentication, user profiles, database client,
+storage bucket, scan insert, or result-history route. See [the privacy boundary](docs/PRIVACY.md) for
+the complete lifecycle and deployment caveats.
+
+## Current model boundary
+
+Static configuration currently points the demo at a legacy seven-class HAM10000 ResNet18
+checkpoint. HAM10000 is a dermoscopy dataset, so this model is not evidence of performance on
+consumer phone photos. Stronger research candidates have not passed the project's frozen
+cross-source evidence gates and have not replaced the demo model. Details and prohibited
+interpretations are in the [model evidence card](docs/MODEL_CARD.md).
+
+Model weights, raw datasets, generated splits and reports, caches, credentials, and private workflow
+records are deliberately not tracked.
+
+## Repository layout
+
+- `mobile/` — Expo + React Native stateless demo app
+- `backend/` — FastAPI upload validation and experimental-classification API
+- `ml/` — separate research, training, evaluation, and inference code
+- `docker/` and `compose.yaml` — reproducible backend/runtime definitions
+- `docs/PRIVACY.md` and `docs/MODEL_CARD.md` — public product evidence
+
+The mobile app talks only to the backend. The backend is the sole boundary allowed to call the
+inference adapter.
+
+## Non-ML verification
+
+These checks are designed not to import, construct, or invoke an ML model:
+
+```powershell
+python -m pip install -r backend/requirements-api.txt -r requirements-dev.txt
+python -m unittest discover -s backend/tests
+python -m ruff check backend
+python -m ruff format --check backend
+
+Set-Location mobile
+npm ci
+npm run typecheck
+npm run format:check
+npm run test:privacy
+npm run audit:high
+```
+
+ML execution is intentionally excluded from local and GitHub-hosted verification. Project policy
+requires a fresh authorized UCSD cloud pod for model construction, inference, training, evaluation,
+or ML tests.
+
+## Configuration and deployment
+
+Copy the relevant `.env.example` file and set only non-secret public mobile values there. Backend
+deployment must explicitly configure:
+
+- `MODEL_PATH` and `MODEL_VERSION`
+- `CORS_ORIGINS` as exact comma-separated origins (never `*` for a public deployment)
+- `ALLOWED_HOSTS` with the deployed API hostname
+- upload, pixel, concurrency, queue, and prediction time limits
+
+The repository supplies a non-root, read-only backend container default with no access log. A real
+deployment must also terminate TLS, bound request bodies at the reverse proxy, avoid body/header
+capture in observability products, set short log retention, and verify that the configured model
+checkpoint is available through `/ready`. Deployment is a separate operational approval gate.

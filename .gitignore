@@ -18,6 +18,17 @@ ml/models/**/*.pt
 ml/models/**/*.pth
 ml/models/**/*.safetensors
 ml/models/**/*.bin
+*.pt
+*.pth
+*.safetensors
+*.ckpt
+*.onnx
+*.tflite
+checkpoints/
+artifacts/
+staging/
+cloud-staging/
+.cloud-staging/
 
 # ── Environment / secrets ────────────────────────────────
 .env
@@ -61,6 +72,13 @@ README.md
 **/README.md
 mobile/DESIGN.md
 
+# Keep private docs ignored while allowing the intentionally public evidence set.
+!docs/
+docs/*
+!docs/PRIVACY.md
+!docs/MODEL_CARD.md
+!/README.md
+
 # ── MCP config (contains project ref) ───────────────────
 .mcp.json
 
@@ -68,7 +86,7 @@ mobile/DESIGN.md
 .eas/credentials*
 
 # ── Supabase ─────────────────────────────────────────────
-supabase/.temp/
+supabase/
 
 # ── Logs ─────────────────────────────────────────────────
 *.log
