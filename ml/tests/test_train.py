@@ -1,87 +1,38 @@
 import unittest
 from pathlib import Path
-from tempfile import TemporaryDirectory
 
-from ml.training.train import (
-    BINARY_LABELS,
-    HAM10000_LABELS,
-    Ham10000Dataset,
-    canonical_to_binary,
-    canonical_to_training_label,
-    labels_for_mode,
-)
+import torch
+
+from ml.training.train import class_weights, metrics_from_confusion, resolve_project_path
 
 
-class CanonicalToBinaryTests(unittest.TestCase):
-    def test_maps_suspicious_labels(self) -> None:
-        self.assertEqual(canonical_to_binary("melanoma"), "suspicious")
-        self.assertEqual(canonical_to_binary("basal_cell_carcinoma"), "suspicious")
-        self.assertEqual(canonical_to_binary("actinic_keratosis"), "suspicious")
+class TrainingUtilityTests(unittest.TestCase):
+    def test_resolve_project_path_keeps_absolute_paths(self) -> None:
+        path = Path.cwd().resolve() / "example.csv"
 
-    def test_maps_non_suspicious_labels(self) -> None:
-        self.assertEqual(canonical_to_binary("nevus"), "non_suspicious")
-        self.assertEqual(canonical_to_binary("benign_keratosis"), "non_suspicious")
-        self.assertEqual(canonical_to_binary("dermatofibroma"), "non_suspicious")
-        self.assertEqual(canonical_to_binary("vascular_lesion"), "non_suspicious")
+        self.assertEqual(resolve_project_path(path), path)
 
-    def test_rejects_unknown_labels(self) -> None:
+    def test_class_weights_balance_observed_counts(self) -> None:
+        weights = class_weights([0, 0, 1], 2, torch.device("cpu"))
+
+        torch.testing.assert_close(weights, torch.tensor([0.75, 1.5]))
+
+    def test_class_weights_reject_missing_classes(self) -> None:
         with self.assertRaises(ValueError):
-            canonical_to_binary("squamous_cell_carcinoma")
+            class_weights([0, 0], 2, torch.device("cpu"))
 
-
-class LabelModeTests(unittest.TestCase):
-    def test_ham10000_mode_keeps_canonical_labels(self) -> None:
-        self.assertEqual(
-            canonical_to_training_label("melanoma", "ham10000"),
-            "melanoma",
-        )
-        self.assertEqual(
-            canonical_to_training_label("vascular_lesion", "ham10000"),
-            "vascular_lesion",
+    def test_metrics_from_confusion_reports_per_class_values(self) -> None:
+        metrics = metrics_from_confusion(
+            loss=0.5,
+            accuracy=0.75,
+            confusion=torch.tensor([[2, 1], [0, 1]]),
+            label_names=["class_a", "class_b"],
         )
 
-    def test_binary_mode_uses_phase_1_grouping(self) -> None:
-        self.assertEqual(
-            canonical_to_training_label("melanoma", "binary"),
-            "suspicious",
-        )
-        self.assertEqual(
-            canonical_to_training_label("nevus", "binary"),
-            "non_suspicious",
-        )
-
-    def test_labels_for_mode(self) -> None:
-        self.assertEqual(labels_for_mode("binary"), BINARY_LABELS)
-        self.assertEqual(labels_for_mode("ham10000"), HAM10000_LABELS)
-
-    def test_rejects_unknown_label_mode(self) -> None:
-        with self.assertRaises(ValueError):
-            labels_for_mode("phase3")
-
-
-class Ham10000DatasetTests(unittest.TestCase):
-    def test_capped_train_sample_keeps_each_ham10000_class(self) -> None:
-        with TemporaryDirectory() as tmp_dir:
-            split_csv = Path(tmp_dir) / "split.csv"
-            rows = ["split,label,image_path"]
-            for idx, label in enumerate(HAM10000_LABELS):
-                rows.append(f"train,{label},{tmp_dir}/image_{idx}.jpg")
-            for idx in range(40):
-                rows.append(f"train,nevus,{tmp_dir}/extra_nevus_{idx}.jpg")
-            split_csv.write_text("\n".join(rows), encoding="utf-8")
-
-            label_to_idx = {label: idx for idx, label in enumerate(HAM10000_LABELS)}
-            dataset = Ham10000Dataset(
-                split_csv,
-                "train",
-                "ham10000",
-                HAM10000_LABELS,
-                label_to_idx,
-                max_samples=len(HAM10000_LABELS),
-                seed=42,
-            )
-
-        self.assertEqual(sorted(dataset.labels()), list(range(len(HAM10000_LABELS))))
+        self.assertEqual(metrics["loss"], 0.5)
+        self.assertEqual(metrics["accuracy"], 0.75)
+        self.assertEqual(metrics["per_class"]["class_a"]["support"], 3)
+        self.assertEqual(metrics["per_class"]["class_b"]["support"], 1)
 
 
 if __name__ == "__main__":

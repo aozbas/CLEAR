@@ -45,6 +45,7 @@ DIRECT_DIAGNOSIS_MAP = {
     "vascular lesion": "vascular_lesion",
     **{diagnosis: "nevus" for diagnosis in NEVUS_DIAGNOSES},
 }
+DERM7PT_LABELS = tuple(sorted({"melanoma", "nevus", *DIRECT_DIAGNOSIS_MAP.values()}))
 UNSUPPORTED_DIAGNOSES = {
     "lentigo",
     "melanosis",
@@ -113,7 +114,7 @@ def canonical_label(diagnosis: str) -> str | None:
     label = DIRECT_DIAGNOSIS_MAP.get(normalized)
     if label is None:
         raise ValueError(f"Unknown Derm7pt diagnosis: {diagnosis}")
-    validate_label(label)
+    validate_label(label, labels=DERM7PT_LABELS)
     return label
 
 

@@ -37,15 +37,6 @@ SUPPORTED_INPUT_GATE_REPORT_SHA256 = (
     "79f53e4ff3c76f56d3375aee38c728a739220e8194e5c2b0bbc3f278e621e6ee"
 )
 SUPPORTED_INPUT_GATE_VERSION = "pad-hiba-open-images-supported-input-gate-v1-79f53e4ff3c76f56"
-HAM10000_LABELS = [
-    "melanoma",
-    "nevus",
-    "basal_cell_carcinoma",
-    "actinic_keratosis",
-    "benign_keratosis",
-    "dermatofibroma",
-    "vascular_lesion",
-]
 PAD_HIBA_LABELS = [
     "actinic_keratosis",
     "basal_cell_carcinoma",
@@ -54,7 +45,7 @@ PAD_HIBA_LABELS = [
     "squamous_cell_carcinoma",
     "seborrheic_keratosis",
 ]
-DEFAULT_LABELS = HAM10000_LABELS
+DEFAULT_LABELS = PAD_HIBA_LABELS
 
 _MODEL: torch.nn.Module | None = None
 _MODEL_PATH: Path | None = None
@@ -97,9 +88,9 @@ def get_device(device: str | torch.device | None = None) -> torch.device:
 
 def get_checkpoint_labels(checkpoint: Any) -> list[str]:
     if not isinstance(checkpoint, dict):
-        return DEFAULT_LABELS
+        raise ValueError("The demo checkpoint must contain an explicit metadata dictionary.")
 
-    labels = checkpoint.get("labels", DEFAULT_LABELS)
+    labels = checkpoint.get("labels")
     if (
         not isinstance(labels, list)
         or not labels
@@ -111,66 +102,65 @@ def get_checkpoint_labels(checkpoint: Any) -> list[str]:
 
 def get_checkpoint_architecture(checkpoint: Any) -> str:
     if not isinstance(checkpoint, dict):
-        return "resnet18"
-    architecture = checkpoint.get("architecture", "resnet18")
-    if architecture not in {"resnet18", "convnext_tiny"}:
-        raise ValueError(f"Unsupported checkpoint architecture: {architecture!r}")
+        raise ValueError("The demo checkpoint must contain an explicit metadata dictionary.")
+    architecture = checkpoint.get("architecture")
+    if architecture != "convnext_tiny":
+        raise ValueError("The demo requires the approved ConvNeXt-Tiny checkpoint architecture.")
     return architecture
 
 
 def get_checkpoint_preprocessing(checkpoint: Any, *, architecture: str) -> str:
     if not isinstance(checkpoint, dict):
-        return PREPROCESSING
-    preprocessing = checkpoint.get("preprocessing", PREPROCESSING)
+        raise ValueError("The demo checkpoint must contain an explicit metadata dictionary.")
+    if architecture != "convnext_tiny":
+        raise ValueError("The demo requires the approved ConvNeXt-Tiny checkpoint architecture.")
+    preprocessing = checkpoint.get("preprocessing")
     if preprocessing != PREPROCESSING:
         raise ValueError(f"Unsupported checkpoint preprocessing: {preprocessing!r}")
-    if architecture == "convnext_tiny":
-        labels = get_checkpoint_labels(checkpoint)
-        if labels != PAD_HIBA_LABELS:
-            raise ValueError("ConvNeXt-Tiny checkpoint labels do not match the demo label order.")
-        expected_metadata = {
-            "dataset": "pad_ufes_hiba",
-            "dataset_role": "multisource_development_final_fit",
-            "training_protocol": CURRENT_TRAINING_PROTOCOL,
-            "model_version": CURRENT_MODEL_VERSION,
-            "sources": ["pad_ufes", "hiba"],
+    labels = get_checkpoint_labels(checkpoint)
+    if labels != PAD_HIBA_LABELS:
+        raise ValueError("ConvNeXt-Tiny checkpoint labels do not match the demo label order.")
+    expected_metadata = {
+        "dataset": "pad_ufes_hiba",
+        "dataset_role": "multisource_development_final_fit",
+        "training_protocol": CURRENT_TRAINING_PROTOCOL,
+        "model_version": CURRENT_MODEL_VERSION,
+        "sources": ["pad_ufes", "hiba"],
+        "source_class_weighting": CURRENT_SOURCE_CLASS_WEIGHTING,
+        "hiba_view_weighting": CURRENT_HIBA_VIEW_WEIGHTING,
+        "manifest_fingerprint": CURRENT_MANIFEST_FINGERPRINT,
+        "manifest_identity_fingerprint": CURRENT_MANIFEST_IDENTITY_FINGERPRINT,
+        "cv_summary_sha256": CURRENT_CV_SUMMARY_SHA256,
+        "cv_decision_all_pass": False,
+        "selection_status": "owner_selected_despite_failed_preregistered_gates",
+        "pretrained_weights": "imagenet",
+        "pretrained_weights_id": "IMAGENET1K_V1",
+        "epoch": 11,
+        "seed": 42,
+        "source_total_raw_image_counts": {"pad_ufes": 2_298, "hiba": 309},
+        "source_total_effective_unit_counts": {"pad_ufes": 2_298.0, "hiba": 308.0},
+        "hyperparameters": {
+            "epochs": 11,
+            "epoch_rule": "median_of_locked_cv_selected_epochs",
+            "locked_cv_selected_epochs": [15, 8, 10, 11, 13],
+            "batch_size": 32,
+            "learning_rate": 1e-4,
+            "weight_decay": 1e-4,
+            "optimizer": "AdamW",
+            "schedule": "none",
+            "augmentation_profile": "baseline",
+            "label_smoothing": 0.0,
+            "sampling": "random_shuffle_without_replacement",
             "source_class_weighting": CURRENT_SOURCE_CLASS_WEIGHTING,
             "hiba_view_weighting": CURRENT_HIBA_VIEW_WEIGHTING,
-            "manifest_fingerprint": CURRENT_MANIFEST_FINGERPRINT,
-            "manifest_identity_fingerprint": CURRENT_MANIFEST_IDENTITY_FINGERPRINT,
-            "cv_summary_sha256": CURRENT_CV_SUMMARY_SHA256,
-            "cv_decision_all_pass": False,
-            "selection_status": "owner_selected_despite_failed_preregistered_gates",
-            "pretrained_weights": "imagenet",
-            "pretrained_weights_id": "IMAGENET1K_V1",
-            "epoch": 11,
-            "seed": 42,
-            "source_total_raw_image_counts": {"pad_ufes": 2_298, "hiba": 309},
-            "source_total_effective_unit_counts": {"pad_ufes": 2_298.0, "hiba": 308.0},
-            "hyperparameters": {
-                "epochs": 11,
-                "epoch_rule": "median_of_locked_cv_selected_epochs",
-                "locked_cv_selected_epochs": [15, 8, 10, 11, 13],
-                "batch_size": 32,
-                "learning_rate": 1e-4,
-                "weight_decay": 1e-4,
-                "optimizer": "AdamW",
-                "schedule": "none",
-                "augmentation_profile": "baseline",
-                "label_smoothing": 0.0,
-                "sampling": "random_shuffle_without_replacement",
-                "source_class_weighting": CURRENT_SOURCE_CLASS_WEIGHTING,
-                "hiba_view_weighting": CURRENT_HIBA_VIEW_WEIGHTING,
-            },
-        }
-        mismatches = [
-            key for key, value in expected_metadata.items() if checkpoint.get(key) != value
-        ]
-        if mismatches:
-            raise ValueError(
-                "ConvNeXt-Tiny checkpoint metadata does not match the approved demo contract: "
-                + ", ".join(mismatches)
-            )
+        },
+    }
+    mismatches = [key for key, value in expected_metadata.items() if checkpoint.get(key) != value]
+    if mismatches:
+        raise ValueError(
+            "ConvNeXt-Tiny checkpoint metadata does not match the approved demo contract: "
+            + ", ".join(mismatches)
+        )
     return preprocessing
 
 
@@ -191,14 +181,12 @@ def load_model(
         )
 
     checkpoint = torch.load(resolved_path, map_location=resolved_device, weights_only=True)
-    state_dict = (
-        checkpoint.get("model_state_dict", checkpoint)
-        if isinstance(checkpoint, dict)
-        else checkpoint
-    )
     labels = get_checkpoint_labels(checkpoint)
     architecture = get_checkpoint_architecture(checkpoint)
     preprocessing = get_checkpoint_preprocessing(checkpoint, architecture=architecture)
+    state_dict = checkpoint.get("model_state_dict")
+    if not isinstance(state_dict, dict) or not state_dict:
+        raise ValueError("The demo checkpoint is missing a model_state_dict.")
 
     model = build_model(num_classes=len(labels), architecture=architecture).to(resolved_device)
     model.load_state_dict(state_dict, strict=True)

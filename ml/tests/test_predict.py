@@ -13,7 +13,6 @@ from ml.inference.predict import (
     CURRENT_SOURCE_CLASS_WEIGHTING,
     CURRENT_TRAINING_PROTOCOL,
     DEFAULT_LABELS,
-    HAM10000_LABELS,
     PAD_HIBA_LABELS,
     PREPROCESSING,
     SUPPORTED_INPUT_GATE_COHORT_FINGERPRINT,
@@ -32,14 +31,15 @@ from ml.inference.predict import (
 
 
 class CheckpointLabelTests(unittest.TestCase):
-    def test_default_labels_are_ham10000_phase_2_labels(self) -> None:
-        self.assertEqual(DEFAULT_LABELS, HAM10000_LABELS)
-        self.assertEqual(len(DEFAULT_LABELS), 7)
+    def test_default_labels_match_the_approved_demo_order(self) -> None:
+        self.assertEqual(DEFAULT_LABELS, PAD_HIBA_LABELS)
+        self.assertEqual(len(DEFAULT_LABELS), 6)
         self.assertIn("melanoma", DEFAULT_LABELS)
-        self.assertIn("vascular_lesion", DEFAULT_LABELS)
+        self.assertIn("squamous_cell_carcinoma", DEFAULT_LABELS)
 
-    def test_checkpoint_labels_default_for_plain_state_dict(self) -> None:
-        self.assertEqual(get_checkpoint_labels({"fc.weight": object()}), DEFAULT_LABELS)
+    def test_checkpoint_labels_reject_plain_state_dict(self) -> None:
+        with self.assertRaises(ValueError):
+            get_checkpoint_labels({"features.0.weight": object()})
 
     def test_checkpoint_labels_use_saved_labels(self) -> None:
         labels = ["melanoma", "nevus", "basal_cell_carcinoma"]
@@ -124,7 +124,7 @@ class CheckpointLabelTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             get_checkpoint_preprocessing(
                 {"preprocessing": "unknown"},
-                architecture="resnet18",
+                architecture="convnext_tiny",
             )
 
     def test_load_image_rejects_unreadable_bytes(self) -> None:
