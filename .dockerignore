@@ -12,6 +12,7 @@ mobile/node_modules
 mobile/.expo
 mobile
 docs
+deploy
 supabase
 AGENTS.md
 PROJECT.md

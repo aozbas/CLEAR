@@ -77,6 +77,8 @@ mobile/DESIGN.md
 docs/*
 !docs/PRIVACY.md
 !docs/MODEL_CARD.md
+!docs/DEPLOYMENT.md
+!docs/DATA_EVIDENCE.md
 !/README.md
 
 # ── MCP config (contains project ref) ───────────────────

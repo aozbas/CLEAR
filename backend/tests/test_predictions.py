@@ -86,6 +86,10 @@ class PublicApiTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers["cache-control"], "no-store")
+        self.assertEqual(
+            response.headers["strict-transport-security"],
+            "max-age=31536000",
+        )
         self.assertEqual(response.headers["x-content-type-options"], "nosniff")
         self.assertEqual(response.headers["x-frame-options"], "DENY")
         self.assertEqual(
