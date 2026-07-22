@@ -179,9 +179,10 @@ export default function DemoScanScreen({ onBack }: Props) {
           <View style={styles.limitationCard}>
             <Text style={styles.limitationTitle}>Important limitation</Text>
             <Text style={styles.limitationText}>
-              The current demo model was trained on dermoscopy images, not consumer phone photos.
-              Its output may be wrong and must not be used for diagnosis, reassurance, or treatment
-              decisions.
+              The current demo model was developed with PAD-UFES and HIBA clinical smartphone-image
+              data. It failed the project&apos;s cross-source promotion gates and has no evidence of
+              reliable behavior on patient- or consumer-taken photos. Its output may be wrong and
+              must not be used for diagnosis, reassurance, or treatment decisions.
             </Text>
           </View>
         </View>

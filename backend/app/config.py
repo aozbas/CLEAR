@@ -10,8 +10,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=BACKEND_DIR / ".env", extra="ignore")
 
-    model_path: str = "ml/models/lesion_classifier_ham10000.pt"
-    model_version: str = "ham10000-resnet18-baseline-2026-05-18"
+    model_path: str = "ml/models/pad_hiba_convnext_tiny_source_balanced_final_seed42.pt"
+    model_version: str = "pad-hiba-convnext-tiny-source-balanced-final-2026-07-22"
     min_prediction_confidence: float = Field(default=0.60, ge=0.0, le=1.0)
     max_upload_bytes: int = Field(default=8 * 1024 * 1024, ge=1)
     max_image_pixels: int = Field(default=25_000_000, ge=1)

@@ -44,6 +44,7 @@ const demoSource = await readFile(
   new URL("../src/screens/DemoScanScreen.tsx", import.meta.url),
   "utf8",
 );
+const labelSource = await readFile(new URL("../src/lib/labels.ts", import.meta.url), "utf8");
 const appConfig = await readFile(new URL("../app.json", import.meta.url), "utf8");
 if (packageJson.dependencies?.["@hosted_database/hosted_database-js"]) {
   violations.push("package.json still depends on @hosted_database/hosted_database-js");
@@ -78,6 +79,23 @@ if (
 }
 if (appConfig.includes("share them with your friends")) {
   violations.push("app.json still uses the default image-picker permission copy");
+}
+
+const requiredModelLabels = [
+  "actinic_keratosis",
+  "basal_cell_carcinoma",
+  "melanoma",
+  "nevus",
+  "squamous_cell_carcinoma",
+  "seborrheic_keratosis",
+];
+for (const label of requiredModelLabels) {
+  if (!labelSource.includes(label)) violations.push(`src/lib/labels.ts is missing ${label}`);
+}
+for (const legacyLabel of ["benign_keratosis", "dermatofibroma", "vascular_lesion"]) {
+  if (labelSource.includes(legacyLabel)) {
+    violations.push(`src/lib/labels.ts still exposes legacy label ${legacyLabel}`);
+  }
 }
 
 for (const forbiddenFile of forbiddenFiles) {

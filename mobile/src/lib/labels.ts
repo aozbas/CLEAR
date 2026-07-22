@@ -3,9 +3,8 @@ const LABELS: Record<string, string> = {
   nevus: "Nevus category",
   basal_cell_carcinoma: "Basal cell carcinoma category",
   actinic_keratosis: "Actinic keratosis category",
-  benign_keratosis: "Benign keratosis category",
-  dermatofibroma: "Dermatofibroma category",
-  vascular_lesion: "Vascular lesion category",
+  squamous_cell_carcinoma: "Squamous cell carcinoma category",
+  seborrheic_keratosis: "Seborrheic keratosis category",
 };
 
 export function displayLabel(label: string | null | undefined): string {
