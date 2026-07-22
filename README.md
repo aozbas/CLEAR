@@ -40,6 +40,8 @@ records are deliberately not tracked.
 - `ml/` — separate research, training, evaluation, and inference code
 - `docker/` and `compose.yaml` — reproducible backend/runtime definitions
 - `docs/PRIVACY.md` and `docs/MODEL_CARD.md` — public product evidence
+- `docs/DATA_EVIDENCE.md` — consumer-photo dataset acceptance and current suitability results
+- `docs/DEPLOYMENT.md` — gated HTTPS hosting and privacy-safe logging runbook
 
 The mobile app talks only to the backend. The backend is the sole boundary allowed to call the
 inference adapter.
@@ -96,7 +98,9 @@ deployment must explicitly configure:
 - `ALLOWED_HOSTS` with the deployed API hostname
 - upload, pixel, concurrency, queue, and prediction time limits
 
-The repository supplies a non-root, read-only backend container default with no access log. A real
-deployment must also terminate TLS, bound request bodies at the reverse proxy, avoid body/header
-capture in observability products, set short log retention, and verify that the configured model
-checkpoint is available through `/ready`. Deployment is a separate operational approval gate.
+The repository supplies a non-root backend container with no access log or server-identification
+header. Local Compose makes its filesystem read-only with bounded ephemeral `/tmp`. A real deployment
+must also terminate TLS, bound request bodies at the reverse proxy, avoid body/header capture in
+observability products, set short log retention, and verify that the configured model checkpoint is
+available through `/ready`. The [deployment runbook](docs/DEPLOYMENT.md) records the proposed managed
+HTTPS design and the owner/provider approvals still required before it can go live.

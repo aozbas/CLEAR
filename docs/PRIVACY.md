@@ -35,8 +35,10 @@ The code does not write those bytes to durable storage, but Python does not guar
 memory zeroization.
 
 All API responses, including errors, receive `Cache-Control: no-store`, `Pragma: no-cache`,
-`X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
+`Strict-Transport-Security: max-age=31536000`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
 `Referrer-Policy: no-referrer`, and a restrictive camera/microphone/geolocation permissions policy.
+Browsers honor HSTS only after receiving it over HTTPS; it does not make the local HTTP development
+server secure.
 
 ## Threat and retention summary
 
@@ -54,14 +56,22 @@ All API responses, including errors, receive `Cache-Control: no-store`, `Pragma:
 Before a public deployment, verify all of the following against the actual runtime:
 
 - HTTPS redirects and HSTS are active; plaintext requests never carry images.
-- Proxy and platform body limits are at most the backend limit.
+- Proxy and platform body limits are at most the backend limit where configurable; otherwise the
+  backend's streaming 8 MiB cutoff is verified and the larger provider ceiling is documented.
 - Access, WAF, APM, exception, and packet-capture settings do not retain request bodies.
 - Log samples contain no image bytes, multipart data, filenames, tokens, or full headers.
-- The container filesystem is read-only except for a bounded ephemeral `/tmp`.
+- Application code writes no files. Use a read-only root filesystem where the host supports it; on
+  managed hosts with an instance-ephemeral writable filesystem, verify that request data is never
+  written there.
 - The service has no database/storage credentials and no outbound analytics integration.
 - CORS and allowed-host lists contain only the intended deployed domains.
 - Timeout, concurrency, and overload paths return the documented safe errors.
 - Data-processing terms and retention for every infrastructure provider are documented.
+
+The proposed Cloud Run controls and their remaining approval gates are in
+[the deployment runbook](DEPLOYMENT.md). Cloud Run request-log exclusions are applied after entries
+reach the Logging API, so they reduce retained logs but do not mean the provider never processes
+network metadata.
 
 If any runtime fact is unknown, describe the demo as stateless in application code—not as a blanket
 guarantee that no network or infrastructure metadata exists.
