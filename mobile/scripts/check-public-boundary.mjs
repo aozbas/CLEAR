@@ -44,6 +44,7 @@ const demoSource = await readFile(
   new URL("../src/screens/DemoScanScreen.tsx", import.meta.url),
   "utf8",
 );
+const labelSource = await readFile(new URL("../src/lib/labels.ts", import.meta.url), "utf8");
 const appConfig = await readFile(new URL("../app.json", import.meta.url), "utf8");
 if (packageJson.dependencies?.["@supabase/supabase-js"]) {
   violations.push("package.json still depends on @supabase/supabase-js");
@@ -59,6 +60,10 @@ const requiredApiControls = [
   "removeTemporaryPickerFile",
   "errorMessageForStatus",
   "ensureSecureApiBase",
+  '"classification_available"',
+  '"classifier_uncertain"',
+  '"poor_image_quality"',
+  '"unsupported_image"',
 ];
 for (const control of requiredApiControls) {
   if (!apiSource.includes(control)) violations.push(`src/lib/api.ts is missing ${control}`);
@@ -76,8 +81,28 @@ if (
 ) {
   violations.push("DemoScanScreen.tsx can publish a superseded upload result");
 }
+if (!demoSource.includes("No classification shown")) {
+  violations.push("DemoScanScreen.tsx does not render an explicit abstention state");
+}
 if (appConfig.includes("share them with your friends")) {
   violations.push("app.json still uses the default image-picker permission copy");
+}
+
+const requiredModelLabels = [
+  "actinic_keratosis",
+  "basal_cell_carcinoma",
+  "melanoma",
+  "nevus",
+  "squamous_cell_carcinoma",
+  "seborrheic_keratosis",
+];
+for (const label of requiredModelLabels) {
+  if (!labelSource.includes(label)) violations.push(`src/lib/labels.ts is missing ${label}`);
+}
+for (const legacyLabel of ["benign_keratosis", "dermatofibroma", "vascular_lesion"]) {
+  if (labelSource.includes(legacyLabel)) {
+    violations.push(`src/lib/labels.ts still exposes legacy label ${legacyLabel}`);
+  }
 }
 
 for (const forbiddenFile of forbiddenFiles) {

@@ -6,6 +6,18 @@ from backend.app.config import Settings
 
 
 class SettingsTests(unittest.TestCase):
+    def test_defaults_select_owner_approved_source_balanced_checkpoint(self) -> None:
+        configured = Settings(_env_file=None)
+
+        self.assertEqual(
+            configured.model_path,
+            "ml/models/pad_hiba_convnext_tiny_source_balanced_final_seed42.pt",
+        )
+        self.assertEqual(
+            configured.model_version,
+            "pad-hiba-convnext-tiny-source-balanced-final-2026-07-22",
+        )
+
     def test_rejects_wildcard_cors_origin(self) -> None:
         with self.assertRaises(ValidationError):
             Settings(_env_file=None, cors_origins="*")
