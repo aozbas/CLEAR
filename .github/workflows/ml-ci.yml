@@ -53,11 +53,23 @@ jobs:
 
             verified_commit="$(jq -r '.verified_commit' "$attestation")"
             declared_ml_tree="$(jq -r '.verified_ml_tree' "$attestation")"
-            git cat-file -e "${verified_commit}^{commit}"
-            git merge-base --is-ancestor "$verified_commit" "$HEAD_SHA"
-            verified_ml_tree="$(git rev-parse "${verified_commit}:ml")"
             head_ml_tree="$(git rev-parse "${HEAD_SHA}:ml")"
-            if [[ "$declared_ml_tree" != "$verified_ml_tree" || "$head_ml_tree" != "$verified_ml_tree" ]]; then
+
+            if git cat-file -e "${verified_commit}^{commit}" 2>/dev/null \
+              && git merge-base --is-ancestor "$verified_commit" "$HEAD_SHA"; then
+              verified_ml_tree="$(git rev-parse "${verified_commit}:ml")"
+              if [[ "$declared_ml_tree" != "$verified_ml_tree" ]]; then
+                echo "::error::The declared ML tree does not match the verified commit."
+                exit 1
+              fi
+            elif [[ "$EVENT_NAME" != "push" ]]; then
+              echo "::error::The UCSD verification commit is unavailable in pull-request history."
+              exit 1
+            else
+              echo "Verification commit is absent after squash; enforcing its declared ML tree."
+            fi
+
+            if [[ "$head_ml_tree" != "$declared_ml_tree" ]]; then
               echo "::error::ML files changed after the attested UCSD verification commit."
               exit 1
             fi
