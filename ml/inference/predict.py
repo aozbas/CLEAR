@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from io import BytesIO
 from pathlib import Path
 from typing import Any
@@ -26,6 +27,16 @@ CURRENT_MANIFEST_FINGERPRINT = "23d3f41f18fc6d1082434fc049b6a7b7af07785df70b668b
 CURRENT_MANIFEST_IDENTITY_FINGERPRINT = (
     "cdce4bb2e59f3ab462ba402fdb13f58caecc0fcfadda269e474a49bfec663828"
 )
+SUPPORTED_INPUT_GATE_PROTOCOL = "pad_hiba_open_images_supported_input_gate_v1"
+SUPPORTED_INPUT_GATE_METHOD = "logsumexp"
+SUPPORTED_INPUT_GATE_THRESHOLD = 4.4970903396606445
+SUPPORTED_INPUT_GATE_COHORT_FINGERPRINT = (
+    "fe5cfd2dc03a79a40eed07fc2b7cc79e28e176a1a5e82d72dc0e572ab56ee1b2"
+)
+SUPPORTED_INPUT_GATE_REPORT_SHA256 = (
+    "79f53e4ff3c76f56d3375aee38c728a739220e8194e5c2b0bbc3f278e621e6ee"
+)
+SUPPORTED_INPUT_GATE_VERSION = "pad-hiba-open-images-supported-input-gate-v1-79f53e4ff3c76f56"
 HAM10000_LABELS = [
     "melanoma",
     "nevus",
@@ -201,6 +212,14 @@ def load_model(
     return model
 
 
+def supported_input_score(logits: torch.Tensor) -> torch.Tensor:
+    if logits.ndim != 2 or logits.shape[0] < 1:
+        raise ValueError("Supported-input scoring requires a non-empty logits batch.")
+    if SUPPORTED_INPUT_GATE_METHOD != "logsumexp":
+        raise RuntimeError("The configured supported-input gate method is unavailable.")
+    return torch.logsumexp(logits, dim=1)
+
+
 def predict(
     image_bytes: bytes,
     model_path: str | Path | None = None,
@@ -216,8 +235,23 @@ def predict(
     with torch.inference_mode():
         logits = model(tensor)
         probabilities = torch.softmax(logits, dim=1).squeeze(0)
+        gate_score = float(supported_input_score(logits).squeeze(0).item())
+
+    input_supported = math.isfinite(gate_score) and gate_score >= SUPPORTED_INPUT_GATE_THRESHOLD
+    if not input_supported:
+        return {
+            "label": None,
+            "confidence": None,
+            "input_supported": False,
+            "input_gate_version": SUPPORTED_INPUT_GATE_VERSION,
+        }
 
     confidence, index = torch.max(probabilities, dim=0)
     labels = _MODEL_LABELS or DEFAULT_LABELS
     label = labels[int(index.item())]
-    return {"label": label, "confidence": float(confidence.item())}
+    return {
+        "label": label,
+        "confidence": float(confidence.item()),
+        "input_supported": True,
+        "input_gate_version": SUPPORTED_INPUT_GATE_VERSION,
+    }

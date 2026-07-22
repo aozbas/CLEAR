@@ -45,7 +45,7 @@ export default function DemoScanScreen({ onBack }: Props) {
     try {
       const response = await predictDemo(asset, controller.signal);
       if (controller.signal.aborted || requestController.current !== controller) return;
-      if (!response.should_retry && !isKnownLabel(response.label)) {
+      if (response.outcome === "classification_available" && !isKnownLabel(response.label)) {
         setError("The server returned an unsupported model category. Try again later.");
         return;
       }
@@ -162,11 +162,17 @@ export default function DemoScanScreen({ onBack }: Props) {
 
       {result ? (
         <View style={styles.resultBlock}>
-          <Text style={styles.resultLabel}>Experimental classification</Text>
-          <Text style={styles.headline}>
-            {result.should_retry ? result.message : displayLabel(result.label)}
+          <Text style={styles.resultLabel}>
+            {result.outcome === "classification_available"
+              ? "Experimental classification"
+              : "No classification shown"}
           </Text>
-          {result.model_score !== null ? (
+          <Text style={styles.headline}>
+            {result.outcome === "classification_available"
+              ? displayLabel(result.label)
+              : result.message}
+          </Text>
+          {result.outcome === "classification_available" && result.model_score !== null ? (
             <View style={styles.scoreRow}>
               <View style={styles.scoreDot} />
               <Text style={styles.scoreText}>
@@ -174,7 +180,9 @@ export default function DemoScanScreen({ onBack }: Props) {
               </Text>
             </View>
           ) : null}
-          {!result.should_retry ? <Text style={styles.resultNote}>{result.message}</Text> : null}
+          {result.outcome === "classification_available" ? (
+            <Text style={styles.resultNote}>{result.message}</Text>
+          ) : null}
 
           <View style={styles.limitationCard}>
             <Text style={styles.limitationTitle}>Important limitation</Text>

@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
   "provider": "ucsd_research_cluster",
-  "verified_at": "2026-07-22T16:28:28Z",
+  "verified_at": "2026-07-22T17:57:16Z",
   "fresh_pod": true,
   "model_execution_local": false,
   "milk10k_used": false,
   "cloud_resources_deleted": true,
-  "verified_commit": "68f8e4eceb059efcd4a104e84a1d9e1f578f7add",
-  "verified_ml_tree": "9facb3dcc1997efd72ae570a2e8435fab279d571",
+  "verified_commit": "8743e0fcaf993eb5acba660df06a2bfcedd775d3",
+  "verified_ml_tree": "986e959f6809facd7250ad7cf79a86d3ca9904f2",
   "runtime": {
     "gpu": "NVIDIA A30",
     "torch": "2.11.0+cu128",
@@ -18,36 +18,51 @@
     "cv_summary_sha256": "20dec905c9470dc34e467d95354ee78b5affaaa14d8ef4d7f13dad7f96a7da53",
     "manifest_fingerprint": "23d3f41f18fc6d1082434fc049b6a7b7af07785df70b668bfb5ec51115747c5d",
     "manifest_identity_fingerprint": "cdce4bb2e59f3ab462ba402fdb13f58caecc0fcfadda269e474a49bfec663828",
-    "hiba_archive_sha256": "771f929e1b8495fd4869f1cc7aa64970ab2096e6829ed7a4515046b8f6748143"
+    "hiba_archive_sha256": "771f929e1b8495fd4869f1cc7aa64970ab2096e6829ed7a4515046b8f6748143",
+    "open_images_cohort_fingerprint": "fe5cfd2dc03a79a40eed07fc2b7cc79e28e176a1a5e82d72dc0e572ab56ee1b2"
   },
   "checkpoint_sha256": "12c7261b06e3da9d1639e5e2c11220837de5a69f972acf25a55c4a0ae31d99b8",
-  "report_sha256": "08193d5278186ac22939fa453e03adcae6f619e8a3ecdd36556ba089f073d495",
+  "report_sha256": "79f53e4ff3c76f56d3375aee38c728a739220e8194e5c2b0bbc3f278e621e6ee",
+  "supported_input_gate": {
+    "protocol": "pad_hiba_open_images_supported_input_gate_v1",
+    "method": "logsumexp",
+    "threshold": 4.4970903396606445,
+    "decision": "enable"
+  },
   "checks": {
     "focused_tests": {
       "status": "passed",
-      "count": 14
+      "count": 19
     },
     "full_ml_tests": {
       "status": "passed",
-      "count": 205
+      "count": 215
+    },
+    "backend_tests": {
+      "status": "passed",
+      "count": 23
     },
     "ruff_check": {
       "status": "passed"
     },
     "ruff_format": {
       "status": "passed",
-      "file_count": 76
+      "file_count": 94
     },
-    "final_fit": {
+    "gate_report_reproduction": {
       "status": "passed",
-      "epochs": 11,
-      "training_history_role": "augmented_training_sanity_only_not_performance_evidence"
+      "byte_identical": true
     },
-    "checkpoint_load": {
-      "status": "passed"
+    "supported_api_smoke": {
+      "status": "passed",
+      "outcome": "classification_available"
     },
-    "synthetic_inference": {
-      "status": "passed"
+    "unsupported_api_smoke": {
+      "status": "passed",
+      "outcome": "unsupported_image",
+      "label_hidden": true,
+      "score_hidden": true,
+      "cache_control": "no-store"
     }
   }
 }
