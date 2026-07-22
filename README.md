@@ -40,6 +40,26 @@ records are deliberately not tracked.
 The mobile app talks only to the backend. The backend is the sole boundary allowed to call the
 inference adapter.
 
+## Contributing and governance
+
+Bug reports, suggestions, documentation improvements, tests, and focused pull requests are welcome.
+Start with [the contribution guide](CONTRIBUTING.md), which includes privacy boundaries, review
+expectations, and the required [Developer Certificate of Origin](DCO) sign-off. The
+[governance policy](GOVERNANCE.md) explains how decisions are made for the official project.
+
+## License and ownership
+
+Unless a file or directory states otherwise, CLEAR source code and original project documentation
+are available under the [Mozilla Public License 2.0](LICENSE). Copyright (c) 2026 Alpaslan Ozbas and
+CLEAR contributors. Contributors retain copyright in their contributions while licensing accepted
+work under the applicable project license.
+
+The code license does not grant rights to the CLEAR name, logo, or other project branding; see the
+[trademark policy](TRADEMARKS.md). It also does not relicense datasets, dataset content, model
+weights, checkpoints, generated artifacts, third-party software, or third-party assets. Those
+materials remain subject to their own terms and must be identified separately before use or
+distribution.
+
 ## Non-ML verification
 
 These checks are designed not to import, construct, or invoke an ML model:
