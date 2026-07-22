@@ -2,6 +2,7 @@ import base64
 import sys
 import unittest
 from io import BytesIO
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 from httpx import ASGITransport, AsyncClient
@@ -32,7 +33,12 @@ def png_fixture(
 
 
 def fake_predictor(_: bytes) -> dict[str, object]:
-    return {"label": "nevus", "confidence": 0.90}
+    return {
+        "label": "nevus",
+        "confidence": 0.90,
+        "input_supported": True,
+        "input_gate_version": predictions.EXPECTED_INPUT_GATE_VERSION,
+    }
 
 
 class PublicApiTests(unittest.IsolatedAsyncioTestCase):
@@ -65,6 +71,16 @@ class PublicApiTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(any(name == "ml" or name.startswith("ml.") for name in sys.modules))
         self.assertFalse(any(name == "torch" or name.startswith("torch.") for name in sys.modules))
 
+    async def test_input_gate_version_matches_the_static_inference_contract(self) -> None:
+        inference_source = (
+            Path(__file__).resolve().parents[2] / "ml" / "inference" / "predict.py"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn(
+            f'SUPPORTED_INPUT_GATE_VERSION = "{predictions.EXPECTED_INPUT_GATE_VERSION}"',
+            inference_source,
+        )
+
     async def test_demo_returns_only_one_transient_experimental_result(self) -> None:
         response = await self.post_image()
 
@@ -87,7 +103,12 @@ class PublicApiTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_low_score_hides_the_category_and_score(self) -> None:
         app.dependency_overrides[predictions.get_predictor] = lambda: (
-            lambda _: {"label": "melanoma", "confidence": 0.10}
+            lambda _: {
+                "label": "melanoma",
+                "confidence": 0.10,
+                "input_supported": True,
+                "input_gate_version": predictions.EXPECTED_INPUT_GATE_VERSION,
+            }
         )
 
         response = await self.post_image()
@@ -98,6 +119,56 @@ class PublicApiTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(response.json()["should_retry"])
         self.assertEqual(response.json()["outcome"], "classifier_uncertain")
         self.assertNotIn("stored", response.json())
+
+    async def test_unsupported_image_hides_the_category_and_internal_gate_score(self) -> None:
+        app.dependency_overrides[predictions.get_predictor] = lambda: (
+            lambda _: {
+                "label": None,
+                "confidence": None,
+                "input_supported": False,
+                "input_gate_version": predictions.EXPECTED_INPUT_GATE_VERSION,
+            }
+        )
+
+        response = await self.post_image()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["outcome"], "unsupported_image")
+        self.assertIsNone(response.json()["label"])
+        self.assertIsNone(response.json()["model_score"])
+        self.assertTrue(response.json()["should_retry"])
+        self.assertNotIn("threshold", response.text.lower())
+        self.assertNotIn("gate", response.text.lower())
+
+    async def test_missing_or_altered_input_gate_provenance_fails_closed(self) -> None:
+        invalid_results = (
+            {"label": "nevus", "confidence": 0.9, "input_supported": True},
+            {
+                "label": "nevus",
+                "confidence": 0.9,
+                "input_supported": True,
+                "input_gate_version": "altered",
+            },
+            {
+                "label": "nevus",
+                "confidence": 0.9,
+                "input_supported": False,
+                "input_gate_version": predictions.EXPECTED_INPUT_GATE_VERSION,
+            },
+        )
+        for result in invalid_results:
+            with self.subTest(result=result):
+                app.dependency_overrides[predictions.get_predictor] = lambda value=result: (
+                    lambda _: value
+                )
+
+                response = await self.post_image()
+
+                self.assertEqual(response.status_code, 500)
+                self.assertEqual(
+                    response.json()["detail"],
+                    "The experimental classification could not be completed.",
+                )
 
     async def test_poor_quality_images_abstain_without_prediction(self) -> None:
         fixtures = {
