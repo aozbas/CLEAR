@@ -8,11 +8,10 @@ services:
       - backend/.env
     environment:
       MODEL_PATH: /workspace/ml/models/pad_hiba_convnext_tiny_source_balanced_final_seed42.pt
-      ALLOWED_HOSTS: localhost,127.0.0.1
     volumes:
       - ./ml/models/pad_hiba_convnext_tiny_source_balanced_final_seed42.pt:/workspace/ml/models/pad_hiba_convnext_tiny_source_balanced_final_seed42.pt:ro
     ports:
-      - "8000:8000"
+      - "0.0.0.0:8000:8000"
     read_only: true
     tmpfs:
       - /tmp:size=16m,mode=1777

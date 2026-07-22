@@ -5,18 +5,20 @@ import { fileURLToPath } from "node:url";
 const mobileRoot = new URL("../", import.meta.url);
 const sourceRoot = new URL("../src/", import.meta.url);
 const forbiddenFiles = [
-  "src/lib/supabase.ts",
+  "src/lib/database.ts",
+  "src/lib/storage.ts",
   "src/screens/LoginScreen.tsx",
   "src/screens/ScanScreen.tsx",
   "src/screens/HistoryScreen.tsx",
 ];
 const forbiddenPatterns = [
-  /@supabase\//i,
-  /supabase\.auth/i,
-  /\/scans(?:["'`/]|$)/i,
-  /\/predictions["'`]/i,
+  /createClient\s*\(/i,
   /signInWithPassword/i,
   /signUp\s*\(/i,
+  /storage\.from\s*\(/i,
+  /\.insert\s*\(/i,
+  /\/scans(?:["'`/]|$)/i,
+  /\/predictions["'`]/i,
   /saved to history/i,
 ];
 
@@ -38,7 +40,6 @@ for (const file of sourceFiles) {
 }
 
 const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
-const packageLock = await readFile(new URL("../package-lock.json", import.meta.url), "utf8");
 const apiSource = await readFile(new URL("../src/lib/api.ts", import.meta.url), "utf8");
 const demoSource = await readFile(
   new URL("../src/screens/DemoScanScreen.tsx", import.meta.url),
@@ -46,13 +47,19 @@ const demoSource = await readFile(
 );
 const labelSource = await readFile(new URL("../src/lib/labels.ts", import.meta.url), "utf8");
 const appConfig = await readFile(new URL("../app.json", import.meta.url), "utf8");
-if (packageJson.dependencies?.["@supabase/supabase-js"]) {
-  violations.push("package.json still depends on @supabase/supabase-js");
+const allowedRuntimeDependencies = new Set([
+  "@react-native-async-storage/async-storage",
+  "expo",
+  "expo-file-system",
+  "expo-image-picker",
+  "react",
+  "react-native",
+]);
+for (const dependency of Object.keys(packageJson.dependencies ?? {})) {
+  if (!allowedRuntimeDependencies.has(dependency)) {
+    violations.push(`package.json has an unreviewed runtime dependency: ${dependency}`);
+  }
 }
-if (packageLock.includes("@supabase/supabase-js")) {
-  violations.push("package-lock.json still contains @supabase/supabase-js");
-}
-
 const requiredApiControls = [
   "FileSystemUploadType.BINARY_CONTENT",
   "REQUEST_TIMEOUT_MS",

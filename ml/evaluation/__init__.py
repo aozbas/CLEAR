@@ -1,1 +1,1 @@
-"""Evaluation harness for comparing experimental lesion classifiers."""
+"""Phone-photo research evaluation utilities."""

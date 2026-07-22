@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from ml.evaluation.schema import HAM10000_LABELS, validate_label
+from ml.evaluation.schema import PAD_UFES_NATIVE_LABELS, validate_label
 
 
 def confusion_matrix(
     truth: Sequence[str],
     predictions: Sequence[str],
     *,
-    labels: tuple[str, ...] = HAM10000_LABELS,
+    labels: tuple[str, ...] = PAD_UFES_NATIVE_LABELS,
 ) -> list[list[int]]:
     if len(truth) != len(predictions):
         raise ValueError("truth and predictions must have the same length.")
@@ -39,7 +39,7 @@ def _safe_divide(numerator: float, denominator: float) -> float:
 def per_class_metrics(
     confusion: list[list[int]],
     *,
-    labels: tuple[str, ...] = HAM10000_LABELS,
+    labels: tuple[str, ...] = PAD_UFES_NATIVE_LABELS,
 ) -> dict[str, dict[str, float | int]]:
     _validate_confusion_shape(confusion, labels)
     metrics: dict[str, dict[str, float | int]] = {}
@@ -70,7 +70,7 @@ def summarize_metrics(
     truth: Sequence[str],
     predictions: Sequence[str],
     *,
-    labels: tuple[str, ...] = HAM10000_LABELS,
+    labels: tuple[str, ...] = PAD_UFES_NATIVE_LABELS,
 ) -> dict[str, object]:
     confusion = confusion_matrix(truth, predictions, labels=labels)
     per_class = per_class_metrics(confusion, labels=labels)

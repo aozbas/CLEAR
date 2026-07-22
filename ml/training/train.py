@@ -1,108 +1,18 @@
-"""Train a HAM10000 classifier.
-
-Run from the project root:
-    python -m ml.training.train
-"""
+"""Shared utilities used by the phone-photo training experiments."""
 
 from __future__ import annotations
 
-import argparse
 import random
 from collections.abc import Iterable
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
 import torch
 import torch.nn as nn
-from PIL import Image
 from torch.utils.data import DataLoader, Dataset
 
-from ml.models.classifier import build_model
-from ml.preprocessing import get_transforms
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_SPLIT_CSV = PROJECT_ROOT / "ml" / "data" / "splits" / "ham10000.csv"
 DEFAULT_SEED = 42
-
-BINARY_LABELS = ["non_suspicious", "suspicious"]
-HAM10000_LABELS = [
-    "melanoma",
-    "nevus",
-    "basal_cell_carcinoma",
-    "actinic_keratosis",
-    "benign_keratosis",
-    "dermatofibroma",
-    "vascular_lesion",
-]
-LABEL_MODES = {
-    "binary": BINARY_LABELS,
-    "ham10000": HAM10000_LABELS,
-}
-DEFAULT_LABEL_MODE = "ham10000"
-DEFAULT_CHECKPOINTS = {
-    "binary": PROJECT_ROOT / "ml" / "models" / "lesion_classifier_binary.pt",
-    "ham10000": PROJECT_ROOT / "ml" / "models" / "lesion_classifier_ham10000.pt",
-}
-SUSPICIOUS_CANONICAL_LABELS = {
-    "melanoma",
-    "basal_cell_carcinoma",
-    "actinic_keratosis",
-}
-NON_SUSPICIOUS_CANONICAL_LABELS = {
-    "nevus",
-    "benign_keratosis",
-    "dermatofibroma",
-    "vascular_lesion",
-}
-
-
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Train a HAM10000 classifier.")
-    parser.add_argument("--split-csv", type=Path, default=DEFAULT_SPLIT_CSV)
-    parser.add_argument(
-        "--label-mode",
-        choices=sorted(LABEL_MODES),
-        default=DEFAULT_LABEL_MODE,
-        help="Use 'ham10000' for Phase 2 7-class training or 'binary' for the Phase 1 fallback.",
-    )
-    parser.add_argument("--checkpoint", type=Path, default=None)
-    parser.add_argument("--epochs", type=int, default=5)
-    parser.add_argument("--batch-size", type=int, default=32)
-    parser.add_argument("--lr", type=float, default=1e-3)
-    parser.add_argument("--weight-decay", type=float, default=1e-4)
-    parser.add_argument("--num-workers", type=int, default=0)
-    parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
-    parser.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto")
-    parser.add_argument("--max-train-samples", type=int, default=None)
-    parser.add_argument("--max-val-samples", type=int, default=None)
-    parser.add_argument("--max-test-samples", type=int, default=None)
-    return parser.parse_args()
-
-
-def canonical_to_binary(label: str) -> str:
-    if label in SUSPICIOUS_CANONICAL_LABELS:
-        return "suspicious"
-    if label in NON_SUSPICIOUS_CANONICAL_LABELS:
-        return "non_suspicious"
-    raise ValueError(f"Unknown canonical label for binary training: {label!r}")
-
-
-def labels_for_mode(label_mode: str) -> list[str]:
-    try:
-        return list(LABEL_MODES[label_mode])
-    except KeyError as exc:
-        raise ValueError(f"Unknown label mode: {label_mode!r}") from exc
-
-
-def canonical_to_training_label(label: str, label_mode: str) -> str:
-    if label_mode == "binary":
-        return canonical_to_binary(label)
-    if label_mode == "ham10000":
-        if label not in HAM10000_LABELS:
-            raise ValueError(f"Unknown HAM10000 canonical label: {label!r}")
-        return label
-    raise ValueError(f"Unknown label mode: {label_mode!r}")
 
 
 def resolve_project_path(path: Path) -> Path:
@@ -127,80 +37,6 @@ def get_device(name: str) -> torch.device:
     if name == "auto" and torch.cuda.is_available():
         return torch.device("cuda")
     return torch.device("cpu")
-
-
-def sample_training_rows(
-    rows: pd.DataFrame,
-    labels: list[str],
-    max_samples: int,
-    seed: int,
-) -> pd.DataFrame:
-    if max_samples < len(labels):
-        raise ValueError(f"max_train_samples={max_samples} is too small for {len(labels)} labels.")
-
-    required_samples = []
-    remaining_rows = rows
-    for offset, label in enumerate(labels):
-        label_rows = rows[rows["training_label"] == label]
-        if label_rows.empty:
-            raise ValueError(f"No training rows found for label={label!r}")
-        sample = label_rows.sample(n=1, random_state=seed + offset)
-        required_samples.append(sample)
-        remaining_rows = remaining_rows.drop(index=sample.index)
-
-    remaining_count = max_samples - len(required_samples)
-    if remaining_count > 0:
-        required_samples.append(remaining_rows.sample(n=remaining_count, random_state=seed))
-
-    return pd.concat(required_samples).sort_values("image_path")
-
-
-class Ham10000Dataset(Dataset):
-    def __init__(
-        self,
-        split_csv: Path,
-        split: str,
-        label_mode: str,
-        labels: list[str],
-        label_to_idx: dict[str, int],
-        max_samples: int | None = None,
-        seed: int = DEFAULT_SEED,
-    ) -> None:
-        rows = pd.read_csv(split_csv)
-        rows = rows[rows["split"] == split].copy()
-        if rows.empty:
-            raise ValueError(f"No rows found for split={split!r} in {split_csv}")
-
-        try:
-            rows["training_label"] = rows["label"].apply(
-                lambda label: canonical_to_training_label(label, label_mode)
-            )
-        except ValueError as exc:
-            raise ValueError(f"Unknown labels in split CSV {split_csv}") from exc
-
-        if max_samples is not None and max_samples < len(rows):
-            if split == "train":
-                rows = sample_training_rows(rows, labels, max_samples, seed)
-            else:
-                rows = rows.sample(n=max_samples, random_state=seed).sort_values("image_path")
-
-        self.rows = rows.reset_index(drop=True)
-        self.label_names = labels
-        self.label_to_idx = label_to_idx
-        self.transform = get_transforms("train" if split == "train" else "val")
-
-    def __len__(self) -> int:
-        return len(self.rows)
-
-    def __getitem__(self, index: int) -> tuple[torch.Tensor, int]:
-        row = self.rows.iloc[index]
-        image_path = resolve_project_path(Path(row["image_path"]))
-        image = Image.open(image_path).convert("RGB")
-        label = self.label_to_idx[row["training_label"]]
-        return self.transform(image), label
-
-    def labels(self) -> list[int]:
-        return [self.label_to_idx[label] for label in self.rows["training_label"].tolist()]
 
 
 def class_weights(labels: Iterable[int], num_classes: int, device: torch.device) -> torch.Tensor:
@@ -230,7 +66,7 @@ def run_epoch(
     device: torch.device,
     label_names: list[str],
     optimizer: torch.optim.Optimizer | None = None,
-) -> dict:
+) -> dict[str, object]:
     training = optimizer is not None
     model.train(training)
 
@@ -259,10 +95,17 @@ def run_epoch(
             total_correct += (predictions == targets).sum().item()
             total += targets.size(0)
 
-            for truth, pred in zip(targets.cpu(), predictions.cpu(), strict=True):
-                confusion[int(truth), int(pred)] += 1
+            for truth, prediction in zip(targets.cpu(), predictions.cpu(), strict=True):
+                confusion[int(truth), int(prediction)] += 1
 
-    return metrics_from_confusion(total_loss / total, total_correct / total, confusion, label_names)
+    if total == 0:
+        raise ValueError("Cannot compute training metrics for an empty loader.")
+    return metrics_from_confusion(
+        total_loss / total,
+        total_correct / total,
+        confusion,
+        label_names,
+    )
 
 
 def metrics_from_confusion(
@@ -270,20 +113,28 @@ def metrics_from_confusion(
     accuracy: float,
     confusion: torch.Tensor,
     label_names: list[str],
-) -> dict:
-    per_class = {}
-    for idx, label in enumerate(label_names):
-        tp = int(confusion[idx, idx])
-        fp = int(confusion[:, idx].sum().item() - tp)
-        fn = int(confusion[idx, :].sum().item() - tp)
-        precision = tp / (tp + fp) if tp + fp else 0.0
-        recall = tp / (tp + fn) if tp + fn else 0.0
+) -> dict[str, object]:
+    per_class: dict[str, dict[str, float | int]] = {}
+    for index, label in enumerate(label_names):
+        true_positive = int(confusion[index, index])
+        false_positive = int(confusion[:, index].sum().item() - true_positive)
+        false_negative = int(confusion[index, :].sum().item() - true_positive)
+        precision = (
+            true_positive / (true_positive + false_positive)
+            if true_positive + false_positive
+            else 0.0
+        )
+        recall = (
+            true_positive / (true_positive + false_negative)
+            if true_positive + false_negative
+            else 0.0
+        )
         f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
         per_class[label] = {
             "precision": precision,
             "recall": recall,
             "f1": f1,
-            "support": int(confusion[idx, :].sum().item()),
+            "support": int(confusion[index, :].sum().item()),
         }
 
     return {
@@ -294,130 +145,20 @@ def metrics_from_confusion(
     }
 
 
-def print_metrics(split: str, metrics: dict) -> None:
-    print(f"{split}: loss={metrics['loss']:.4f} accuracy={metrics['accuracy']:.4f}")
-    for label, class_metrics in metrics["per_class"].items():
+def print_metrics(split: str, metrics: dict[str, object]) -> None:
+    loss = float(metrics["loss"])
+    accuracy = float(metrics["accuracy"])
+    print(f"{split}: loss={loss:.4f} accuracy={accuracy:.4f}")
+    per_class = metrics["per_class"]
+    if not isinstance(per_class, dict):
+        raise ValueError("per_class metrics must be a dictionary.")
+    for label, values in per_class.items():
+        if not isinstance(values, dict):
+            raise ValueError(f"Metrics for {label!r} must be a dictionary.")
         print(
             "  "
-            f"{label}: precision={class_metrics['precision']:.4f} "
-            f"recall={class_metrics['recall']:.4f} "
-            f"f1={class_metrics['f1']:.4f} "
-            f"support={class_metrics['support']}"
+            f"{label}: precision={float(values['precision']):.4f} "
+            f"recall={float(values['recall']):.4f} "
+            f"f1={float(values['f1']):.4f} "
+            f"support={int(values['support'])}"
         )
-
-
-def save_checkpoint(
-    path: Path,
-    model: nn.Module,
-    epoch: int,
-    val_metrics: dict,
-    labels: list[str],
-    label_to_idx: dict[str, int],
-    label_mode: str,
-) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    checkpoint = {
-        "model_state_dict": model.state_dict(),
-        "epoch": epoch,
-        "labels": labels,
-        "label_to_idx": label_to_idx,
-        "label_mode": label_mode,
-        "val_metrics": val_metrics,
-    }
-    if label_mode == "binary":
-        checkpoint["binary_groups"] = {
-            "suspicious": sorted(SUSPICIOUS_CANONICAL_LABELS),
-            "non_suspicious": sorted(NON_SUSPICIOUS_CANONICAL_LABELS),
-        }
-    torch.save(checkpoint, path)
-
-
-def main() -> None:
-    args = parse_args()
-    set_seed(args.seed)
-    device = get_device(args.device)
-    print(f"Using device: {device}")
-
-    split_csv = resolve_project_path(args.split_csv)
-    checkpoint_arg = args.checkpoint or DEFAULT_CHECKPOINTS[args.label_mode]
-    checkpoint = resolve_project_path(checkpoint_arg)
-    labels = labels_for_mode(args.label_mode)
-    label_to_idx = {label: idx for idx, label in enumerate(labels)}
-
-    train_dataset = Ham10000Dataset(
-        split_csv,
-        "train",
-        args.label_mode,
-        labels,
-        label_to_idx,
-        max_samples=args.max_train_samples,
-        seed=args.seed,
-    )
-    val_dataset = Ham10000Dataset(
-        split_csv,
-        "val",
-        args.label_mode,
-        labels,
-        label_to_idx,
-        max_samples=args.max_val_samples,
-        seed=args.seed,
-    )
-    test_dataset = Ham10000Dataset(
-        split_csv,
-        "test",
-        args.label_mode,
-        labels,
-        label_to_idx,
-        max_samples=args.max_test_samples,
-        seed=args.seed,
-    )
-
-    print(
-        f"Dataset sizes: train={len(train_dataset)} val={len(val_dataset)} test={len(test_dataset)}"
-    )
-
-    train_loader = build_loader(
-        train_dataset, args.batch_size, shuffle=True, num_workers=args.num_workers
-    )
-    val_loader = build_loader(
-        val_dataset, args.batch_size, shuffle=False, num_workers=args.num_workers
-    )
-    test_loader = build_loader(
-        test_dataset, args.batch_size, shuffle=False, num_workers=args.num_workers
-    )
-
-    model = build_model(num_classes=len(labels)).to(device)
-    criterion = nn.CrossEntropyLoss(
-        weight=class_weights(train_dataset.labels(), len(labels), device)
-    )
-    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-
-    best_val_loss = float("inf")
-    best_epoch = 0
-
-    for epoch in range(1, args.epochs + 1):
-        print(f"\nEpoch {epoch}/{args.epochs}")
-        train_metrics = run_epoch(model, train_loader, criterion, device, labels, optimizer)
-        val_metrics = run_epoch(model, val_loader, criterion, device, labels)
-
-        print_metrics("train", train_metrics)
-        print_metrics("val", val_metrics)
-
-        if val_metrics["loss"] < best_val_loss:
-            best_val_loss = val_metrics["loss"]
-            best_epoch = epoch
-            save_checkpoint(
-                checkpoint, model, epoch, val_metrics, labels, label_to_idx, args.label_mode
-            )
-            print(f"Saved checkpoint: {checkpoint}")
-
-    checkpoint_data = torch.load(checkpoint, map_location=device)
-    model.load_state_dict(checkpoint_data["model_state_dict"])
-    test_metrics = run_epoch(model, test_loader, criterion, device, labels)
-
-    print(f"\nBest epoch: {best_epoch}")
-    print_metrics("test", test_metrics)
-
-
-if __name__ == "__main__":
-    main()
