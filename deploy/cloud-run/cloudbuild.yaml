@@ -1,0 +1,20 @@
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --file
+      - docker/backend.Dockerfile
+      - --tag
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/clear-backend:${_TAG}
+      - .
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/clear-backend:${_TAG}
+
+substitutions:
+  _REGION: us-central1
+  _REPOSITORY: clear
+  _TAG: manual
+
+options:
+  logging: CLOUD_LOGGING_ONLY

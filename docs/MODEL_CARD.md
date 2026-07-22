@@ -18,8 +18,11 @@ Static backend and inference configuration currently selects:
 - Configured model-version string: `pad-hiba-convnext-tiny-source-balanced-final-2026-07-22`
 - Display value: the top softmax output, labeled in the UI as an **uncalibrated model score**
 
-The repository does not track the model weights. This wiring was determined by static code and
-configuration inspection; this documentation does not load or evaluate the model.
+The repository does not track the model weights. The configured file is 111,376,483 bytes with
+SHA-256 `12c7261b06e3da9d1639e5e2c11220837de5a69f972acf25a55c4a0ae31d99b8`.
+The final-fit manifest fingerprint is
+`23d3f41f18fc6d1082434fc049b6a7b7af07785df70b668bfb5ec51115747c5d`.
+These identities were checked without loading or evaluating the model.
 
 ## Training-data and checkpoint rights boundary
 
@@ -29,11 +32,31 @@ published under CC BY 4.0. The HIBA cohort comes from the
 exact source metadata used by CLEAR was mechanically checked as CC-BY. ISIC requires collection and
 image attribution to be retained.
 
-Those terms are separate from CLEAR's source-code license, which does not relicense datasets or a
-trained checkpoint. Before publicly hosting or distributing the configured checkpoint, the project
-owner must record exact source provenance, verify that checkpoint distribution and the intended use
-are permitted by both dataset sources, and retain all required notices and citations. The checkpoint
-must remain untracked until that rights review is complete.
+Those terms allow sharing and adaptation when attribution, a license link, and change notices are
+retained. They are separate from CLEAR's source-code license, which does not relicense datasets or a
+trained checkpoint.
+
+The final fit was initialized from TorchVision ConvNeXt-Tiny `IMAGENET1K_V1`. TorchVision source code
+is BSD-3-Clause, but [ImageNet's access terms](https://image-net.org/accessagreement) describe the
+database as available only for non-commercial research and educational use, and
+[ImageNet states](https://www.image-net.org/about.php) that it does not own the underlying image
+copyrights. TorchVision does not provide a separate, checkpoint-specific grant that resolves every
+right inherited from those images.
+
+The resulting project decision is:
+
+- **Public checkpoint download or redistribution: not permitted by CLEAR.** The file remains ignored,
+  untracked, and absent from public container images and release assets.
+- **Private server-side provisioning: conditionally allowed only for CLEAR's non-commercial
+  educational experiment**, with the artifact in access-controlled storage and the PAD-UFES, HIBA,
+  TorchVision, and ImageNet notices retained here.
+- **Commercial use, relicensing, or claiming an unrestricted model license: blocked** until qualified
+  legal review or replacement with a training chain whose data and pretrained-weight rights are
+  unambiguous.
+
+This is a conservative project distribution decision, not legal advice or a claim that model weights
+are legally an adaptation of any particular image. The deployment gate is documented in
+[the backend deployment runbook](DEPLOYMENT.md).
 
 ## Central limitation
 
@@ -63,7 +86,9 @@ Cross-source experiments exposed a severe generalization ceiling:
 HIBA consists of clinician-taken smartphone imagery, and MRA-MIDAS uses standardized clinical
 iPhone/iPad capture. Neither is a patient/consumer-taken holdout. DDI was rejected as a suitability
 set because of clinical/procedural distribution differences and shortcut risks. No examined public
-dataset establishes consumer smartphone generalization.
+dataset establishes consumer smartphone generalization. A metadata-only audit of the exact
+consumer-contributed SCIN source and the dataset acceptance gates are recorded in
+[the consumer-photo evidence note](DATA_EVIDENCE.md).
 
 The configured artifact is a fixed 11-epoch final fit on all 2,298 PAD-UFES images and 309 HIBA
 images (308 lesions), using the original equal source/class weighting. Eleven is the median of the
