@@ -1,127 +1,138 @@
 import logging
-from typing import Annotated
+from collections.abc import Mapping
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
-from ..config import settings, hosted_database
-from ..dependencies import get_current_user_id
-from ..services.inference import InvalidImageError, predict_lesion
-from ..services.storage import UnsupportedImageFormatError
+from ..config import settings
+from ..models.predictions import ExperimentalClassificationResponse
+from ..services.image_validation import (
+    ImageRequestError,
+    ImageTooLargeError,
+    MalformedImageError,
+    UnsupportedImageTypeError,
+    read_validated_image_body,
+)
+from ..services.prediction_runtime import (
+    PredictionBusyError,
+    PredictionCallable,
+    PredictionCapacity,
+    PredictionTimeoutError,
+)
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+prediction_capacity = PredictionCapacity(settings.max_concurrent_predictions)
 
-
-def prediction_response(
-    result: dict,
-    *,
-    image_url: str | None,
-    signed_image_url: str | None,
-    scan_id: str | None,
-    saved: bool,
-    should_retry: bool,
-    message: str | None,
-) -> dict:
-    return {
-        "label": result["label"],
-        "confidence": result["confidence"],
-        "image_url": image_url,
-        "signed_image_url": signed_image_url,
-        "scan_id": scan_id,
-        "saved": saved,
-        "should_retry": should_retry,
-        "message": message,
-        "model_version": settings.model_version,
+RAW_IMAGE_REQUEST = {
+    "requestBody": {
+        "required": True,
+        "content": {
+            "image/jpeg": {"schema": {"type": "string", "format": "binary"}},
+            "image/png": {"schema": {"type": "string", "format": "binary"}},
+        },
     }
+}
 
 
-def low_confidence_response(result: dict) -> dict:
-    return prediction_response(
-        result,
-        image_url=None,
-        signed_image_url=None,
-        scan_id=None,
-        saved=False,
-        should_retry=True,
-        message="Image unclear - try again.",
-    )
+def get_predictor() -> PredictionCallable:
+    # Keep ML imports out of application startup and API-only test collection. The
+    # production adapter is imported only when a real prediction request reaches it.
+    from ..services.inference import predict_lesion
+
+    return predict_lesion
 
 
-@router.post("/demo")
-async def create_demo_prediction(image: Annotated[UploadFile, File()]):
-    data = await image.read()
+def _validated_prediction(result: Mapping[str, Any]) -> tuple[str, float]:
+    label = result.get("label")
+    score = result.get("confidence")
+    if not isinstance(label, str) or not label:
+        raise RuntimeError("Predictor returned an invalid label")
+    if not isinstance(score, (int, float)) or isinstance(score, bool):
+        raise RuntimeError("Predictor returned an invalid score")
+    numeric_score = float(score)
+    if not 0.0 <= numeric_score <= 1.0:
+        raise RuntimeError("Predictor returned an out-of-range score")
+    return label, numeric_score
+
+
+@router.post(
+    "/demo",
+    response_model=ExperimentalClassificationResponse,
+    summary="Return one transient experimental classification",
+    description=(
+        "Accepts one raw JPEG or PNG request body. CLEAR processes it transiently and returns "
+        "one experimental classification without storing the image or result. This is not a "
+        "diagnosis."
+    ),
+    openapi_extra=RAW_IMAGE_REQUEST,
+)
+async def create_demo_prediction(
+    request: Request,
+    predictor: Annotated[PredictionCallable, Depends(get_predictor)],
+) -> ExperimentalClassificationResponse:
     try:
-        result = predict_lesion(data)
-        if result["confidence"] < settings.min_prediction_confidence:
-            return low_confidence_response(result)
-
-        return prediction_response(
-            result,
-            image_url=None,
-            signed_image_url=None,
-            scan_id=None,
-            saved=False,
-            should_retry=False,
-            message="Demo result only. No photo or result was saved.",
+        image_bytes = await read_validated_image_body(
+            request,
+            max_bytes=settings.max_upload_bytes,
+            max_pixels=settings.max_image_pixels,
         )
-    except (InvalidImageError, UnsupportedImageFormatError) as exc:
-        raise HTTPException(status_code=415, detail=str(exc)) from exc
-    except FileNotFoundError as exc:
-        logger.exception("Prediction model checkpoint is missing")
+        raw_result = await prediction_capacity.run(
+            predictor,
+            image_bytes,
+            queue_timeout_seconds=settings.prediction_queue_timeout_seconds,
+            prediction_timeout_seconds=settings.prediction_timeout_seconds,
+        )
+        label, score = _validated_prediction(raw_result)
+    except ImageTooLargeError as exc:
+        raise HTTPException(status_code=status.HTTP_413_CONTENT_TOO_LARGE, detail=str(exc)) from exc
+    except (UnsupportedImageTypeError, MalformedImageError) as exc:
         raise HTTPException(
-            status_code=503, detail="Classification model is not available."
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=str(exc)
+        ) from exc
+    except ImageRequestError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except PredictionBusyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="The experimental classifier is busy. Try again shortly.",
+            headers={"Retry-After": "2"},
+        ) from exc
+    except PredictionTimeoutError as exc:
+        logger.warning("Experimental classification timed out")
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail="The experimental classification timed out. Try again.",
+        ) from exc
+    except FileNotFoundError as exc:
+        logger.error("Prediction model checkpoint is missing")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="The experimental classifier is unavailable.",
         ) from exc
     except Exception as exc:
-        logger.exception("Demo classification request failed")
+        logger.error("Experimental classification request failed")
         raise HTTPException(
-            status_code=500, detail="Classification could not be completed."
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="The experimental classification could not be completed.",
         ) from exc
 
-
-@router.post("")
-async def create_prediction(
-    image: Annotated[UploadFile, File()],
-    user_id: Annotated[str, Depends(get_current_user_id)],
-):
-    data = await image.read()
-    try:
-        result = predict_lesion(data)
-        if result["confidence"] < settings.min_prediction_confidence:
-            return low_confidence_response(result)
-
-        insert_response = (
-            hosted_database.table("scans")
-            .insert(
-                {
-                    "user_id": user_id,
-                    "image_url": None,
-                    "prediction": result["label"],
-                    "confidence": result["confidence"],
-                    "model_version": settings.model_version,
-                }
-            )
-            .execute()
+    if score < settings.min_prediction_confidence:
+        return ExperimentalClassificationResponse(
+            label=None,
+            model_score=None,
+            should_retry=True,
+            message=(
+                "No result is shown because the model score was below the display threshold. "
+                "Try a clear, well-lit JPEG or PNG."
+            ),
+            model_version=settings.model_version,
         )
-        scan = insert_response.data[0]
-    except (InvalidImageError, UnsupportedImageFormatError) as exc:
-        raise HTTPException(status_code=415, detail=str(exc)) from exc
-    except FileNotFoundError as exc:
-        logger.exception("Prediction model checkpoint is missing")
-        raise HTTPException(
-            status_code=503, detail="Classification model is not available."
-        ) from exc
-    except Exception as exc:
-        logger.exception("Classification request failed")
-        raise HTTPException(
-            status_code=500, detail="Classification could not be completed."
-        ) from exc
 
-    return prediction_response(
-        result,
-        image_url=None,
-        signed_image_url=None,
-        scan_id=scan["id"],
-        saved=True,
+    return ExperimentalClassificationResponse(
+        label=label,
+        model_score=score,
         should_retry=False,
-        message="Saved to history. Photo was not saved.",
+        message="Experimental result only. CLEAR does not save the image or result.",
+        model_version=settings.model_version,
     )

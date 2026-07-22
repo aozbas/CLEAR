@@ -12,7 +12,6 @@ body:
         - Mobile
         - Backend
         - ML
-        - Hosted database
         - CI
         - Docs/private notes
     validations:
@@ -59,5 +58,5 @@ body:
       options:
         - label: This fits the current phase and does not introduce later-phase features early.
           required: true
-        - label: This keeps mobile, backend, ML, and Hosted database responsibilities separated.
+        - label: This keeps mobile, backend, and ML responsibilities separated.
         - label: This avoids medical-certainty language and frames outputs as experimental classifications.

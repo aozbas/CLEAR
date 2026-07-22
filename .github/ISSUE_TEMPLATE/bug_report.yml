@@ -12,7 +12,6 @@ body:
         - Mobile
         - Backend
         - ML
-        - Hosted database
         - CI
         - Docs/private notes
     validations:

@@ -37,3 +37,6 @@ jobs:
 
       - name: Type check
         run: npm run typecheck
+
+      - name: Check privacy-first public boundary
+        run: npm run test:privacy
