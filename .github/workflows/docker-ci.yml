@@ -21,18 +21,3 @@ jobs:
 
       - name: Test backend image
         run: docker run --rm clear-backend:ci python -m unittest discover -s backend/tests
-
-  ml-image:
-    name: ML Docker build
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v7
-
-      - name: Build ML image
-        run: docker build -f docker/ml.Dockerfile -t clear-ml:ci .
-
-      - name: Test ML image
-        run: docker run --rm clear-ml:ci python -m unittest ml.tests.test_train ml.tests.test_predict

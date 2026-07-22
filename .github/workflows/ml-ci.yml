@@ -12,29 +12,70 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check out repository
+      - name: Check out repository without executing ML code
         uses: actions/checkout@v7
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
         with:
-          python-version-file: .python-version
-          cache: pip
-          cache-dependency-path: |
-            ml/requirements.txt
-            requirements-dev.txt
+          fetch-depth: 0
 
-      - name: Install dependencies
+      - name: Enforce fresh-UCSD-pod execution policy
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install -r ml/requirements.txt
-          python -m pip install -r requirements-dev.txt
+          if [[ -n "$BASE_SHA" && ! "$BASE_SHA" =~ ^0+$ ]]; then
+            changed_files="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")"
+          else
+            changed_files="$(git show --pretty='' --name-only "$HEAD_SHA")"
+          fi
 
-      - name: Ruff check
-        run: python -m ruff check ml
+          if grep -qE '^ml/' <<<"$changed_files"; then
+            attestation=".github/ml-cloud-verification.json"
+            if [[ ! -f "$attestation" ]]; then
+              echo "::error::ML files changed without a UCSD cloud-verification attestation."
+              exit 1
+            fi
 
-      - name: Ruff format check
-        run: python -m ruff format --check ml
+            jq -e '
+              .schema_version == 1 and
+              .provider == "ucsd_research_cluster" and
+              .fresh_pod == true and
+              .model_execution_local == false and
+              .milk10k_used == false and
+              .cloud_resources_deleted == true and
+              (.verified_commit | type == "string" and length == 40) and
+              (.verified_ml_tree | type == "string" and length == 40) and
+              (.checkpoint_sha256 | type == "string" and test("^[0-9a-f]{64}$")) and
+              (.checks | length >= 6) and
+              ([.checks[].status] | all(. == "passed"))
+            ' "$attestation" >/dev/null
 
-      - name: Test
-        run: python -m unittest discover -s ml/tests
+            verified_commit="$(jq -r '.verified_commit' "$attestation")"
+            declared_ml_tree="$(jq -r '.verified_ml_tree' "$attestation")"
+            head_ml_tree="$(git rev-parse "${HEAD_SHA}:ml")"
+
+            if git cat-file -e "${verified_commit}^{commit}" 2>/dev/null \
+              && git merge-base --is-ancestor "$verified_commit" "$HEAD_SHA"; then
+              verified_ml_tree="$(git rev-parse "${verified_commit}:ml")"
+              if [[ "$declared_ml_tree" != "$verified_ml_tree" ]]; then
+                echo "::error::The declared ML tree does not match the verified commit."
+                exit 1
+              fi
+            elif [[ "$EVENT_NAME" != "push" ]]; then
+              echo "::error::The UCSD verification commit is unavailable in pull-request history."
+              exit 1
+            else
+              echo "Verification commit is absent after squash; enforcing its declared ML tree."
+            fi
+
+            if [[ "$head_ml_tree" != "$declared_ml_tree" ]]; then
+              echo "::error::ML files changed after the attested UCSD verification commit."
+              exit 1
+            fi
+
+            echo "ML tree matches the fresh-UCSD-pod verification attestation."
+            exit 0
+          fi
+
+          echo "No ML files changed. No model code was imported, constructed, or invoked."

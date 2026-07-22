@@ -1,45 +1,33 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Session } from "@supabase/supabase-js";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, StatusBar, StyleSheet, View } from "react-native";
-import { supabase } from "./src/lib/supabase";
 import DemoScanScreen from "./src/screens/DemoScanScreen";
 import DisclaimerScreen from "./src/screens/DisclaimerScreen";
 import EntryScreen from "./src/screens/EntryScreen";
-import HistoryScreen from "./src/screens/HistoryScreen";
-import LoginScreen from "./src/screens/LoginScreen";
-import ScanScreen from "./src/screens/ScanScreen";
 import { theme } from "./src/theme";
 
-type AppScreen = "scan" | "history";
-type PublicScreen = "entry" | "demo" | "login";
+type PublicScreen = "entry" | "demo";
 const DISCLAIMER_KEY = "clear.disclaimer.accepted";
 
 export default function App() {
-  const [session, setSession] = useState<Session | null>(null);
   const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [publicScreen, setPublicScreen] = useState<PublicScreen>("entry");
+  const [screen, setScreen] = useState<PublicScreen>("entry");
 
   useEffect(() => {
     let isMounted = true;
-    Promise.all([supabase.auth.getSession(), AsyncStorage.getItem(DISCLAIMER_KEY)])
-      .then(([{ data }, accepted]) => {
-        if (!isMounted) return;
-        setSession(data.session);
-        setDisclaimerAccepted(accepted === "true");
+    AsyncStorage.getItem(DISCLAIMER_KEY)
+      .then((accepted) => {
+        if (isMounted) setDisclaimerAccepted(accepted === "true");
+      })
+      .catch(() => {
+        // If local preferences are unavailable, show the disclaimer again.
       })
       .finally(() => {
         if (isMounted) setLoading(false);
       });
-
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
-      if (!isMounted) return;
-      setSession(s);
-    });
     return () => {
       isMounted = false;
-      sub.subscription.unsubscribe();
     };
   }, []);
 
@@ -56,60 +44,23 @@ export default function App() {
     return (
       <DisclaimerScreen
         onContinue={async () => {
-          await AsyncStorage.setItem(DISCLAIMER_KEY, "true");
+          await AsyncStorage.setItem(DISCLAIMER_KEY, "true").catch(() => undefined);
           setDisclaimerAccepted(true);
         }}
       />
     );
   }
 
-  if (!session) {
-    if (publicScreen === "demo") {
-      return (
-        <>
-          <StatusBar barStyle="dark-content" />
-          <DemoScanScreen onBack={() => setPublicScreen("entry")} />
-        </>
-      );
-    }
-
-    return (
-      <>
-        <StatusBar barStyle="dark-content" />
-        {publicScreen === "login" ? (
-          <LoginScreen />
-        ) : (
-          <EntryScreen
-            onDemo={() => setPublicScreen("demo")}
-            onSignIn={() => setPublicScreen("login")}
-          />
-        )}
-      </>
-    );
-  }
-
   return (
     <>
       <StatusBar barStyle="dark-content" />
-      <Home email={session.user.email ?? "(no email)"} />
+      {screen === "demo" ? (
+        <DemoScanScreen onBack={() => setScreen("entry")} />
+      ) : (
+        <EntryScreen onDemo={() => setScreen("demo")} />
+      )}
     </>
   );
-}
-
-function Home({ email }: { email: string }) {
-  const [screen, setScreen] = useState<AppScreen>("scan");
-
-  if (screen === "history") {
-    return (
-      <HistoryScreen
-        email={email}
-        onScan={() => setScreen("scan")}
-        onSignOut={() => supabase.auth.signOut()}
-      />
-    );
-  }
-
-  return <ScanScreen onHistory={() => setScreen("history")} />;
 }
 
 const styles = StyleSheet.create({
