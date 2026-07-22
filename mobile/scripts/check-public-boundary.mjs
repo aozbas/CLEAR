@@ -40,6 +40,10 @@ for (const file of sourceFiles) {
 const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
 const packageLock = await readFile(new URL("../package-lock.json", import.meta.url), "utf8");
 const apiSource = await readFile(new URL("../src/lib/api.ts", import.meta.url), "utf8");
+const demoSource = await readFile(
+  new URL("../src/screens/DemoScanScreen.tsx", import.meta.url),
+  "utf8",
+);
 const appConfig = await readFile(new URL("../app.json", import.meta.url), "utf8");
 if (packageJson.dependencies?.["@supabase/supabase-js"]) {
   violations.push("package.json still depends on @supabase/supabase-js");
@@ -61,6 +65,16 @@ for (const control of requiredApiControls) {
 }
 if (apiSource.includes("response.text()")) {
   violations.push("src/lib/api.ts exposes an upstream response body");
+}
+if (!apiSource.includes('relativePath.split(/[\\\\/]/).includes("..")')) {
+  violations.push("src/lib/api.ts is missing the cache traversal guard");
+}
+if (
+  !/controller\.signal\.aborted\s*\|\|\s*requestController\.current\s*!==\s*controller/.test(
+    demoSource,
+  )
+) {
+  violations.push("DemoScanScreen.tsx can publish a superseded upload result");
 }
 if (appConfig.includes("share them with your friends")) {
   violations.push("app.json still uses the default image-picker permission copy");

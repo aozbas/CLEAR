@@ -44,6 +44,7 @@ export default function DemoScanScreen({ onBack }: Props) {
     setResult(null);
     try {
       const response = await predictDemo(asset, controller.signal);
+      if (controller.signal.aborted || requestController.current !== controller) return;
       if (!response.should_retry && !isKnownLabel(response.label)) {
         setError("The server returned an unsupported model category. Try again later.");
         return;

@@ -81,7 +81,16 @@ function ensureSecureApiBase(): void {
 
 export async function removeTemporaryPickerFile(uri: string | null): Promise<void> {
   const cacheDirectory = FileSystem.cacheDirectory;
-  if (!uri || !cacheDirectory || !uri.startsWith(cacheDirectory)) return;
+  if (!uri || !cacheDirectory) return;
+
+  const cacheRoot = cacheDirectory.endsWith("/") ? cacheDirectory : `${cacheDirectory}/`;
+  if (!uri.startsWith(cacheRoot)) return;
+  try {
+    const relativePath = decodeURIComponent(uri.slice(cacheRoot.length));
+    if (relativePath.split(/[\\/]/).includes("..")) return;
+  } catch {
+    return;
+  }
   await FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => undefined);
 }
 
