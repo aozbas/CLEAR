@@ -1,8 +1,13 @@
+from __future__ import annotations
+
 import warnings
 from io import BytesIO
+from typing import TYPE_CHECKING
 
 from PIL import Image, ImageStat, UnidentifiedImageError
-from starlette.requests import ClientDisconnect, Request
+
+if TYPE_CHECKING:
+    from starlette.requests import Request
 
 ALLOWED_IMAGE_TYPES = {
     "image/jpeg": "JPEG",
@@ -45,6 +50,8 @@ async def read_validated_image_body(
     max_bytes: int,
     max_pixels: int,
 ) -> bytes:
+    from starlette.requests import ClientDisconnect
+
     content_type = normalized_content_type(request.headers.get("content-type"))
     expected_format = ALLOWED_IMAGE_TYPES.get(content_type)
     if expected_format is None:
