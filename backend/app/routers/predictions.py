@@ -5,11 +5,12 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from ..config import settings
-from ..models.predictions import ExperimentalClassificationResponse
+from ..models.predictions import ExperimentalClassificationResponse, PredictionOutcome
 from ..services.image_validation import (
     ImageRequestError,
     ImageTooLargeError,
     MalformedImageError,
+    PoorImageQualityError,
     UnsupportedImageTypeError,
     read_validated_image_body,
 )
@@ -23,6 +24,7 @@ from ..services.prediction_runtime import (
 router = APIRouter()
 logger = logging.getLogger(__name__)
 prediction_capacity = PredictionCapacity(settings.max_concurrent_predictions)
+EXPECTED_INPUT_GATE_VERSION = "pad-hiba-open-images-supported-input-gate-v1-79f53e4ff3c76f56"
 
 RAW_IMAGE_REQUEST = {
     "requestBody": {
@@ -43,9 +45,19 @@ def get_predictor() -> PredictionCallable:
     return predict_lesion
 
 
-def _validated_prediction(result: Mapping[str, Any]) -> tuple[str, float]:
+def _validated_prediction(result: Mapping[str, Any]) -> tuple[bool, str | None, float | None]:
+    gate_version = result.get("input_gate_version")
+    if gate_version != EXPECTED_INPUT_GATE_VERSION:
+        raise RuntimeError("Predictor returned invalid supported-input provenance")
+    input_supported = result.get("input_supported")
+    if not isinstance(input_supported, bool):
+        raise RuntimeError("Predictor returned an invalid supported-input decision")
     label = result.get("label")
     score = result.get("confidence")
+    if not input_supported:
+        if label is not None or score is not None:
+            raise RuntimeError("An unsupported input must not expose a label or score")
+        return False, None, None
     if not isinstance(label, str) or not label:
         raise RuntimeError("Predictor returned an invalid label")
     if not isinstance(score, (int, float)) or isinstance(score, bool):
@@ -53,17 +65,31 @@ def _validated_prediction(result: Mapping[str, Any]) -> tuple[str, float]:
     numeric_score = float(score)
     if not 0.0 <= numeric_score <= 1.0:
         raise RuntimeError("Predictor returned an out-of-range score")
-    return label, numeric_score
+    return True, label, numeric_score
+
+
+def _abstention(
+    outcome: PredictionOutcome,
+    message: str,
+) -> ExperimentalClassificationResponse:
+    return ExperimentalClassificationResponse(
+        outcome=outcome,
+        label=None,
+        model_score=None,
+        should_retry=True,
+        message=message,
+        model_version=settings.model_version,
+    )
 
 
 @router.post(
     "/demo",
     response_model=ExperimentalClassificationResponse,
-    summary="Return one transient experimental classification",
+    summary="Return one transient experimental outcome",
     description=(
         "Accepts one raw JPEG or PNG request body. CLEAR processes it transiently and returns "
-        "one experimental classification without storing the image or result. This is not a "
-        "diagnosis."
+        "one experimental classification or an explicit abstention without storing the image or "
+        "result. This is not a diagnosis."
     ),
     openapi_extra=RAW_IMAGE_REQUEST,
 )
@@ -83,7 +109,15 @@ async def create_demo_prediction(
             queue_timeout_seconds=settings.prediction_queue_timeout_seconds,
             prediction_timeout_seconds=settings.prediction_timeout_seconds,
         )
-        label, score = _validated_prediction(raw_result)
+        input_supported, label, score = _validated_prediction(raw_result)
+    except PoorImageQualityError:
+        return _abstention(
+            "poor_image_quality",
+            (
+                "No result is shown because the image does not contain enough visible detail. "
+                "Try a clear, close-up photo of one visible skin spot."
+            ),
+        )
     except ImageTooLargeError as exc:
         raise HTTPException(status_code=status.HTTP_413_CONTENT_TOO_LARGE, detail=str(exc)) from exc
     except (UnsupportedImageTypeError, MalformedImageError) as exc:
@@ -117,19 +151,29 @@ async def create_demo_prediction(
             detail="The experimental classification could not be completed.",
         ) from exc
 
-    if score < settings.min_prediction_confidence:
-        return ExperimentalClassificationResponse(
-            label=None,
-            model_score=None,
-            should_retry=True,
-            message=(
-                "No result is shown because the model score was below the display threshold. "
-                "Try a clear, well-lit JPEG or PNG."
+    if not input_supported:
+        return _abstention(
+            "unsupported_image",
+            (
+                "No result is shown because this image does not match the photo types evaluated "
+                "for this experiment. Try a clear, close-up photo of one visible skin spot."
             ),
-            model_version=settings.model_version,
+        )
+
+    if label is None or score is None:
+        raise RuntimeError("A supported input is missing its experimental classification")
+
+    if score < settings.min_prediction_confidence:
+        return _abstention(
+            "classifier_uncertain",
+            (
+                "No result is shown because the experimental classifier was uncertain. "
+                "Try a clear, close-up photo of one visible skin spot."
+            ),
         )
 
     return ExperimentalClassificationResponse(
+        outcome="classification_available",
         label=label,
         model_score=score,
         should_retry=False,

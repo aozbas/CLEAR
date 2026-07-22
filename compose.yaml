@@ -7,10 +7,10 @@ services:
     env_file:
       - backend/.env
     environment:
-      MODEL_PATH: /workspace/ml/models/lesion_classifier_ham10000.pt
+      MODEL_PATH: /workspace/ml/models/pad_hiba_convnext_tiny_source_balanced_final_seed42.pt
       ALLOWED_HOSTS: localhost,127.0.0.1
     volumes:
-      - ./ml/models/lesion_classifier_ham10000.pt:/workspace/ml/models/lesion_classifier_ham10000.pt:ro
+      - ./ml/models/pad_hiba_convnext_tiny_source_balanced_final_seed42.pt:/workspace/ml/models/pad_hiba_convnext_tiny_source_balanced_final_seed42.pt:ro
     ports:
       - "8000:8000"
     read_only: true

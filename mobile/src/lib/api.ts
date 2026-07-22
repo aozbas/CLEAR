@@ -15,6 +15,11 @@ export type LocalImage = {
 
 export type PredictionResponse = {
   result_type: "experimental_classification";
+  outcome:
+    | "classification_available"
+    | "classifier_uncertain"
+    | "poor_image_quality"
+    | "unsupported_image";
   label: string | null;
   model_score: number | null;
   should_retry: boolean;
@@ -167,10 +172,21 @@ function abortError(): Error {
 function isPredictionResponse(value: unknown): value is PredictionResponse {
   if (!value || typeof value !== "object") return false;
   const result = value as Partial<PredictionResponse>;
+  const validOutcome =
+    result.outcome === "classification_available" ||
+    result.outcome === "classifier_uncertain" ||
+    result.outcome === "poor_image_quality" ||
+    result.outcome === "unsupported_image";
+  const validFields =
+    result.outcome === "classification_available"
+      ? typeof result.label === "string" &&
+        typeof result.model_score === "number" &&
+        result.should_retry === false
+      : result.label === null && result.model_score === null && result.should_retry === true;
   return (
     result.result_type === "experimental_classification" &&
-    (typeof result.label === "string" || result.label === null) &&
-    (typeof result.model_score === "number" || result.model_score === null) &&
+    validOutcome &&
+    validFields &&
     typeof result.should_retry === "boolean" &&
     typeof result.message === "string" &&
     typeof result.model_version === "string"
