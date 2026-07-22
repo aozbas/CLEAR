@@ -3,8 +3,9 @@
 ## Intended scope
 
 CLEAR is an educational and technical demonstration of image-classification plumbing. It returns a
-single experimental category for a submitted skin-lesion image. It is not a medical device,
-diagnostic system, triage tool, screening tool, clinical decision aid, or consumer reassurance tool.
+single experimental outcome for a submitted image: either a six-class category or an explicit
+abstention. It is not a medical device, diagnostic system, triage tool, screening tool, clinical
+decision aid, or consumer reassurance tool.
 
 ## Model actually wired into the demo
 
@@ -70,6 +71,22 @@ five locked selected epochs (15, 8, 10, 11, 13). Because all approved developmen
 in this fit, it has no new independent validation metric. The owner selected it for the experimental
 demo despite the failed gates; that product choice does not overturn the research result.
 
+## Supported-input abstention evidence
+
+The demo adds a post-hoc input-compatibility gate without changing the classifier weights. Three
+scores from the fixed logits were preregistered: maximum softmax output, maximum logit, and
+log-sum-exp. Calibration selected log-sum-exp with threshold `4.4970903396606445`. The disjoint
+evaluation partition retained 95.80% of PAD-UFES and 98.60% of HIBA development images while
+accepting 0 of 400 obvious non-skin Open Images examples across vehicles, animals, food, household,
+and outdoor-object groups. Every frozen acceptance rule passed.
+
+This result is deliberately narrow. The final classifier had already seen every PAD-UFES/HIBA
+positive image during fitting, so positive retention is development behavior rather than independent
+classifier evidence. The negative evaluation uses fixed, attributed Open Images categories and does
+not establish detection of unsupported skin conditions, arbitrary/adversarial inputs, or reliable
+consumer-photo behavior. Rejection means only that no classification is shown under this
+experimental gate; it does not determine whether an image contains a lesion.
+
 ## Leakage and holdout caveats
 
 - PAD-UFES appears in MedSigLIP's stated pretraining data, so PAD-UFES results involving MedSigLIP
@@ -83,7 +100,8 @@ demo despite the failed gates; that product choice does not overturn the researc
 - Severe development-to-public-use-domain mismatch and failed cross-source gates
 - Sparse melanoma and weak SCC evidence in relevant phone-photo research
 - Unknown behavior across skin tones, devices, lighting, framing, artifacts, and uncommon lesions
-- Closed-set forcing: an out-of-vocabulary image still competes among known categories
+- Partial closed-set protection only: the abstention gate covers tested obvious non-skin categories,
+  not every out-of-vocabulary condition or image
 - Uncalibrated softmax score and no established clinical threshold
 - Potential harm from false reassurance, unnecessary alarm, or delayed professional care
 
