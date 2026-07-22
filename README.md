@@ -20,11 +20,12 @@ the complete lifecycle and deployment caveats.
 
 ## Current model boundary
 
-Static configuration currently points the demo at a legacy seven-class HAM10000 ResNet18
-checkpoint. HAM10000 is a dermoscopy dataset, so this model is not evidence of performance on
-consumer phone photos. Stronger research candidates have not passed the project's frozen
-cross-source evidence gates and have not replaced the demo model. Details and prohibited
-interpretations are in the [model evidence card](docs/MODEL_CARD.md).
+Static configuration points the demo at an owner-selected, six-class ConvNeXt-Tiny checkpoint fit
+with source-balanced PAD-UFES and HIBA development data. The originating experiment failed all four
+preregistered cross-source gate categories. The final fit creates a runnable artifact; it does not
+create new independent performance evidence or establish reliable behavior on patient- or
+consumer-taken photos. Details and prohibited interpretations are in the
+[model evidence card](docs/MODEL_CARD.md).
 
 Model weights, raw datasets, generated splits and reports, caches, credentials, and private workflow
 records are deliberately not tracked.
