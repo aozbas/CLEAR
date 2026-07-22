@@ -1,24 +1,61 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Response, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
-from .routers import predictions, scans
+from .config import settings
+from .models.predictions import HealthResponse, ReadinessResponse
+from .routers import predictions
 
-app = FastAPI(title="CLEAR API")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:8081", "http://localhost:19006"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+app = FastAPI(
+    title="CLEAR Experimental Classification API",
+    description=(
+        "A privacy-first, stateless educational demo. It accepts one image and returns one "
+        "experimental classification. It is not a medical device and does not provide diagnoses."
+    ),
+    version="0.1.0",
 )
 
-# Auth is handled directly by the mobile app via the Supabase JS client.
-# The backend validates the JWT on each request but does not proxy auth calls.
-app.include_router(predictions.router, prefix="/predictions", tags=["predictions"])
-app.include_router(scans.router, prefix="/scans", tags=["scans"])
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.parsed_allowed_hosts)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.parsed_cors_origins,
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type"],
+)
 
 
-@app.get("/health")
-def health():
-    return {"status": "ok"}
+@app.middleware("http")
+async def privacy_headers(request, call_next):
+    response = await call_next(request)
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    return response
+
+
+app.include_router(predictions.router, prefix="/predictions", tags=["experimental classification"])
+
+
+@app.get("/health", response_model=HealthResponse, summary="Liveness check")
+def health() -> HealthResponse:
+    return HealthResponse()
+
+
+@app.get(
+    "/ready",
+    response_model=ReadinessResponse,
+    summary="Static checkpoint readiness check",
+    description="Checks only that the configured checkpoint path exists; it does not load a model.",
+)
+def readiness(response: Response) -> ReadinessResponse:
+    checkpoint_present = settings.resolved_model_path.is_file()
+    if not checkpoint_present:
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    return ReadinessResponse(
+        status="ready" if checkpoint_present else "not_ready",
+        model_checkpoint_present=checkpoint_present,
+    )
