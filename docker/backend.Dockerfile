@@ -13,7 +13,7 @@ RUN apt-get update \
 
 COPY backend/requirements*.txt /tmp/
 RUN python -m pip install --upgrade pip \
-    && python -m pip install --index-url https://download.pytorch.org/whl/cpu torch==2.11.0 torchvision==0.26.0 \
+    && python -m pip install --index-url https://download.pytorch.org/whl/cpu torch==2.13.0 torchvision==0.28.0 \
     && grep -v -E '^(torch|torchvision)==' /tmp/requirements.txt > /tmp/backend-runtime-requirements.txt \
     && python -m pip install -r /tmp/backend-runtime-requirements.txt
 

@@ -16,6 +16,9 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
 
+      - name: Verify backend runtime pins
+        run: python docker/check_backend_runtime.py
+
       - name: Build backend image
         run: docker build -f docker/backend.Dockerfile -t clear-backend:ci .
 
