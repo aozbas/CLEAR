@@ -76,7 +76,7 @@ phone, and no cloud deployment is required.
 Prerequisites:
 
 - Docker Desktop with Docker Compose
-- Node.js 22.13 or newer and npm
+- Node.js 20 or newer and npm
 - Expo Go on the phone
 - the separately provisioned checkpoint named
   `pad_hiba_convnext_tiny_source_balanced_final_seed42.pt`
