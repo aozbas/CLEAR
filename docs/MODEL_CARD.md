@@ -33,30 +33,39 @@ exact source metadata used by CLEAR was mechanically checked as CC-BY. ISIC requ
 image attribution to be retained.
 
 Those terms allow sharing and adaptation when attribution, a license link, and change notices are
-retained. They are separate from CLEAR's source-code license, which does not relicense datasets or a
-trained checkpoint.
+retained. They do not, by themselves, prohibit distributing a trained checkpoint. They are separate
+from CLEAR's source-code license, which does not automatically relicense datasets or a trained
+checkpoint.
 
 The final fit was initialized from TorchVision ConvNeXt-Tiny `IMAGENET1K_V1`. TorchVision source code
 is BSD-3-Clause, but [ImageNet's access terms](https://image-net.org/accessagreement) describe the
 database as available only for non-commercial research and educational use, and
 [ImageNet states](https://www.image-net.org/about.php) that it does not own the underlying image
-copyrights. TorchVision does not provide a separate, checkpoint-specific grant that resolves every
-right inherited from those images.
+copyrights. [TorchVision's model documentation](https://docs.pytorch.org/vision/stable/models.html)
+also warns that pretrained models may carry licenses or terms derived from their training data and
+places responsibility on the user to determine whether a use is permitted. The available terms do
+not clearly resolve whether those restrictions carry into this fine-tuned checkpoint.
 
 The resulting project decision is:
 
-- **Public checkpoint download or redistribution: not permitted by CLEAR.** The file remains ignored,
-  untracked, and absent from public container images and release assets.
+- **Public checkpoint download or redistribution: temporarily on hold.** The file remains ignored,
+  untracked, and absent from public container images and release assets while its upstream
+  pretrained-weight chain is reviewed.
 - **Private server-side provisioning: conditionally allowed only for CLEAR's non-commercial
   educational experiment**, with the artifact in access-controlled storage and the PAD-UFES, HIBA,
   TorchVision, and ImageNet notices retained here.
-- **Commercial use, relicensing, or claiming an unrestricted model license: blocked** until qualified
-  legal review or replacement with a training chain whose data and pretrained-weight rights are
-  unambiguous.
+- **Commercial use, relicensing, or claiming an unrestricted model license: blocked** until
+  qualified legal review, written upstream permission, or replacement with a training chain whose
+  data and pretrained-weight rights are unambiguous.
 
-This is a conservative project distribution decision, not legal advice or a claim that model weights
-are legally an adaptation of any particular image. The deployment gate is documented in
-[the backend deployment runbook](DEPLOYMENT.md).
+This is a conservative project distribution decision, not legal advice, a finding of illegality, or
+a claim that model weights are legally an adaptation of any particular image. If distribution is
+cleared later, the checkpoint needs its own artifact notice, dataset and upstream attributions,
+scope/limitations, checksum, and applicable terms; CLEAR's MPL-2.0 code license alone is not enough.
+At 111,376,483 bytes, the current file also exceeds
+[GitHub's 100 MiB normal Git object limit](https://docs.github.com/repositories/working-with-files/managing-large-files/about-large-files-on-github),
+so a cleared artifact would need an appropriate large-file or release channel rather than a normal
+Git commit. The deployment gate is documented in [the backend deployment runbook](DEPLOYMENT.md).
 
 ## Central limitation
 

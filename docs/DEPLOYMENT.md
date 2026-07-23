@@ -2,9 +2,12 @@
 
 ## Current status
 
-The contributor demo runs locally: Docker hosts the backend and checkpoint on the contributor's
-computer, while Expo Go connects from a phone on the same trusted LAN. It does not require a cloud
-service. See the root README for that flow.
+The contributor demo runs locally: the verified Windows path uses the pinned host-backend launcher
+for the checkpoint, while Expo Go connects from a phone on the same trusted LAN. It does not require
+a cloud service. Docker remains available for container verification and for hosts whose published
+port is actually reachable over the LAN; on the tested Windows Docker Desktop configuration, port
+8000 was reachable through loopback but not through the Wi-Fi interface. See the root README for the
+preflight and launcher flow.
 
 The repository is also prepared for a possible managed Cloud Run deployment, but no public service
 has been created. The configured model has not been executed outside the authorized UCSD research

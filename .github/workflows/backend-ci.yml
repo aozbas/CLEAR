@@ -22,6 +22,7 @@ jobs:
           cache: pip
           cache-dependency-path: |
             backend/requirements-api.txt
+            backend/requirements-phone.txt
             requirements-dev.txt
 
       - name: Install dependencies
@@ -31,10 +32,10 @@ jobs:
           python -m pip install -r requirements-dev.txt
 
       - name: Ruff check
-        run: python -m ruff check backend
+        run: python -m ruff check backend scripts
 
       - name: Ruff format check
-        run: python -m ruff format --check backend
+        run: python -m ruff format --check backend scripts
 
       - name: Test without importing ML runtimes
         run: |
@@ -42,7 +43,12 @@ jobs:
           import sys
           import unittest
 
-          suite = unittest.defaultTestLoader.discover("backend/tests")
+          suite = unittest.TestSuite(
+              [
+                  unittest.defaultTestLoader.discover("backend/tests"),
+                  unittest.defaultTestLoader.discover("scripts/tests"),
+              ]
+          )
           result = unittest.TextTestRunner().run(suite)
           forbidden = [
               name
