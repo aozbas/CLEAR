@@ -68,23 +68,25 @@ distribution.
 
 ## Run the local phone demo
 
-The demo uses two local processes. Docker runs the FastAPI backend and the selected checkpoint on
-your computer. Expo serves the mobile bundle and displays a QR code that opens the app in Expo Go on
-a phone connected to the same trusted Wi-Fi network. The whole repository does not run on the
-phone, and no cloud deployment is required.
+The demo uses two local processes. A pinned FastAPI runtime runs the selected checkpoint on your
+computer. Expo serves the mobile bundle and displays a QR code that opens the app in Expo Go on a
+phone connected to the same trusted Wi-Fi network. The whole repository does not run on the phone,
+and no cloud deployment is required.
 
 Prerequisites:
 
-- Docker Desktop with Docker Compose
+- Python 3.13 for the verified Windows physical-phone backend path
 - Node.js 20 or newer and npm
 - Expo Go on the phone
 - the separately provisioned checkpoint named
   `pad_hiba_convnext_tiny_source_balanced_final_seed42.pt`
+- optionally, Docker Desktop with Docker Compose for container-only or LAN-compatible hosts
 
 The checkpoint is intentionally absent from Git. Its public redistribution rights are not yet
-resolved, so a fresh clone cannot perform classification until an authorized copy is placed at
+resolved. This is a conservative distribution hold, not a finding that sharing trained weights is
+illegal. A fresh clone cannot perform classification until an authorized copy is placed at
 `ml/models/pad_hiba_convnext_tiny_source_balanced_final_seed42.pt`. Do not substitute a differently
-trained checkpoint under that filename; the inference boundary verifies the artifact metadata and
+trained checkpoint under that filename; the readiness checker verifies the artifact identity and
 fails closed when it does not match.
 
 From PowerShell at the repository root:
@@ -103,14 +105,24 @@ ALLOWED_HOSTS=localhost,127.0.0.1,testserver,192.168.1.42
 EXPO_PUBLIC_API_URL=http://192.168.1.42:8000
 ```
 
-Start the backend and confirm that the checkpoint is present without loading it:
+On Windows, use the verified physical-phone launcher. It refuses public, unassigned, or non-Private
+network interfaces; verifies the environment, exact checkpoint, Python version, and dependency
+lock; creates an ignored pinned runtime on first use; and disables request access logs:
 
 ```powershell
-docker compose up --build
-Invoke-RestMethod http://127.0.0.1:8000/ready
+python scripts/check_demo_readiness.py --skip-runtime
+.\scripts\start_phone_backend.ps1 -LanIp 192.168.1.42
 ```
 
-In a second PowerShell window:
+Keep that foreground window open. In a second PowerShell window, verify both endpoints through the
+same LAN address that the phone will use:
+
+```powershell
+Invoke-RestMethod http://192.168.1.42:8000/health
+Invoke-RestMethod http://192.168.1.42:8000/ready
+```
+
+Then start Expo:
 
 ```powershell
 Set-Location mobile
@@ -123,8 +135,19 @@ Scan Expo's QR code with Expo Go. Before selecting an image, open
 phone can reach the backend. If it cannot, verify both devices are on the same non-guest network,
 that the IP has not changed, and that the operating-system firewall allows private-network traffic
 to TCP port 8000. On Windows, mark the current Wi-Fi profile **Private** only when it is a trusted
-home or lab network (`Settings` -> `Network & internet` -> `Wi-Fi` -> current network), then allow
-Docker Desktop on private networks. Leave public or untrusted networks set to **Public**.
+home or lab network (`Settings` -> `Network & internet` -> `Wi-Fi` -> current network). Leave public
+or untrusted networks set to **Public**.
+
+Docker remains an alternative:
+
+```powershell
+docker compose up --build
+```
+
+Before using the app, test `/health` at the LAN address from the phone. Docker Desktop on some
+Windows configurations publishes the port through loopback but not through the Wi-Fi interface; in
+that case, stop Compose and use the launcher above. Do not weaken firewall rules on an untrusted
+network.
 
 This development connection is plain HTTP. Use it only on a trusted LAN and only with synthetic,
 public, or otherwise non-sensitive test images. A public demo requires HTTPS and the separate
@@ -137,8 +160,9 @@ These checks are designed not to import, construct, or invoke an ML model:
 ```powershell
 python -m pip install -r backend/requirements-api.txt -r requirements-dev.txt
 python -m unittest discover -s backend/tests
-python -m ruff check backend
-python -m ruff format --check backend
+python -m unittest discover -s scripts/tests
+python -m ruff check backend scripts
+python -m ruff format --check backend scripts
 
 Set-Location mobile
 npm ci
