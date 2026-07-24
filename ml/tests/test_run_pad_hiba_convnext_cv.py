@@ -131,7 +131,12 @@ def _metric_bundle(
     }
 
 
-def _write_report_fixture(root: Path, *, fail_hiba_scc: bool = False) -> None:
+def _write_report_fixture(
+    root: Path,
+    *,
+    fail_hiba_scc: bool = False,
+    pretrained: bool = True,
+) -> None:
     for fold_index in range(5):
         pad_confusion = _fold_confusion(PAD_SUPPORT, fold_index)
         hiba_image_confusion = _fold_confusion(HIBA_IMAGE_SUPPORT, fold_index)
@@ -157,8 +162,10 @@ def _write_report_fixture(root: Path, *, fail_hiba_scc: bool = False) -> None:
         report = {
             "architecture": ARCHITECTURE,
             "input_mode": "image_only",
-            "pretrained_weights": PRETRAINED_WEIGHTS,
-            "pretrained_weights_id": pretrained_weights_id(ARCHITECTURE, PRETRAINED_WEIGHTS),
+            "pretrained_weights": PRETRAINED_WEIGHTS if pretrained else "none",
+            "pretrained_weights_id": (
+                pretrained_weights_id(ARCHITECTURE, PRETRAINED_WEIGHTS) if pretrained else None
+            ),
             "preprocessing": PREPROCESSING,
             "augmentation_profile": AUGMENTATION_PROFILE,
             "labels": list(PAD_UFES_NATIVE_LABELS),
@@ -303,6 +310,21 @@ class PadHibaConvnextCrossValidationTests(unittest.TestCase):
         self.assertFalse(failing["decision_rules"]["all_pass"])
         self.assertNotIn("private-patient", passing_text)
         self.assertNotIn("ISIC_", passing_text)
+
+    def test_summary_accepts_random_initialization_without_pretrained_identity(self) -> None:
+        with TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            reports_root = root / "random-init"
+            _write_report_fixture(reports_root, pretrained=False)
+
+            summary = summarize_reports(
+                reports_root,
+                root / "random-init-summary.json",
+                pretrained=False,
+            )
+
+        self.assertEqual(summary["pretrained_weights"], "none")
+        self.assertIsNone(summary["pretrained_weights_id"])
 
 
 if __name__ == "__main__":
