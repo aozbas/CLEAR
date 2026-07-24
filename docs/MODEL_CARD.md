@@ -67,6 +67,35 @@ At 111,376,483 bytes, the current file also exceeds
 so a cleared artifact would need an appropriate large-file or release channel rather than a normal
 Git commit. The deployment gate is documented in [the backend deployment runbook](DEPLOYMENT.md).
 
+### What a Hugging Face release would and would not solve
+
+A Hugging Face model repository is technically well suited to this file size: Hub repositories are
+versioned and use a large-file storage backend, and a client can download one file at an immutable
+commit revision. A public repository can be downloaded without requiring every demo user to create
+an account. The project could pin the exact revision and independently verify the artifact's
+SHA-256 before the backend starts.
+
+Hugging Face is a distribution channel, not a rights clearance service. Its
+[terms for user content](https://huggingface.co/terms-of-service) require the uploader to have the
+right to post the content and grant broad reuse rights when a repository is public. A
+[gated model](https://huggingface.co/docs/hub/en/models-gated) still distributes files to approved,
+authenticated users; gating collects user identity and does not create permission that the
+uploader lacks. A private repository avoids public download but requires credentials and therefore
+does not meet CLEAR's intended no-account contributor quickstart.
+
+If a checkpoint with an unambiguous rights chain is approved later, the preferred bootstrap is:
+
+1. publish the checkpoint and complete evidence card in a dedicated public model repository;
+2. pin a full immutable Hub revision, filename, byte count, and SHA-256 in CLEAR;
+3. let a one-shot Compose service download and verify the file into a named Docker volume;
+4. start the backend only after that verifier exits successfully, mounting the file read-only; and
+5. reuse the verified volume on later starts while continuing to fail closed on any identity drift.
+
+This design keeps the source repository and backend image small, makes the first
+`docker compose up --build` perform the only download, and avoids embedding tokens. It must not be
+wired to the current checkpoint unless its upstream rights are resolved. The current repository
+therefore continues to require the separately provisioned local file.
+
 ## Central limitation
 
 PAD-UFES and HIBA are clinical/clinician-collected smartphone-image sources, not evidence of

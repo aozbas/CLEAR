@@ -778,12 +778,16 @@ def validate_report(
     batch_size: int = DEFAULT_BATCH_SIZE,
     learning_rate: float = DEFAULT_LEARNING_RATE,
     weight_decay: float = DEFAULT_WEIGHT_DECAY,
+    pretrained: bool = True,
 ) -> None:
+    expected_weights = PRETRAINED_WEIGHTS if pretrained else "none"
     expected = {
         "architecture": ARCHITECTURE,
         "input_mode": "image_only",
-        "pretrained_weights": PRETRAINED_WEIGHTS,
-        "pretrained_weights_id": pretrained_weights_id(ARCHITECTURE, PRETRAINED_WEIGHTS),
+        "pretrained_weights": expected_weights,
+        "pretrained_weights_id": (
+            pretrained_weights_id(ARCHITECTURE, PRETRAINED_WEIGHTS) if pretrained else None
+        ),
         "preprocessing": PREPROCESSING,
         "augmentation_profile": AUGMENTATION_PROFILE,
         "labels": list(PAD_UFES_NATIVE_LABELS),
@@ -903,6 +907,11 @@ def summarize_reports(
     *,
     num_folds: int = DEFAULT_FOLDS,
     seed: int = DEFAULT_SEED,
+    epochs: int = DEFAULT_EPOCHS,
+    batch_size: int = DEFAULT_BATCH_SIZE,
+    learning_rate: float = DEFAULT_LEARNING_RATE,
+    weight_decay: float = DEFAULT_WEIGHT_DECAY,
+    pretrained: bool = True,
 ) -> dict[str, object]:
     reports_root = resolve_project_path(Path(reports_root))
     reports = []
@@ -911,7 +920,17 @@ def summarize_reports(
         if not report_path.is_file():
             raise FileNotFoundError(f"Missing PAD/HIBA report: {report_path}")
         report = json.loads(report_path.read_text(encoding="utf-8"))
-        validate_report(report, fold_index=fold_index, num_folds=num_folds, seed=seed)
+        validate_report(
+            report,
+            fold_index=fold_index,
+            num_folds=num_folds,
+            seed=seed,
+            epochs=epochs,
+            batch_size=batch_size,
+            learning_rate=learning_rate,
+            weight_decay=weight_decay,
+            pretrained=pretrained,
+        )
         reports.append(report)
     consistency_keys = (
         "manifest_fingerprint",
@@ -989,14 +1008,14 @@ def summarize_reports(
         "sources": list(SOURCE_ORDER),
         "architecture": ARCHITECTURE,
         "input_mode": "image_only",
-        "pretrained_weights": PRETRAINED_WEIGHTS,
+        "pretrained_weights": PRETRAINED_WEIGHTS if pretrained else "none",
         "pretrained_weights_id": reports[0]["pretrained_weights_id"],
         "preprocessing": PREPROCESSING,
         "augmentation_profile": AUGMENTATION_PROFILE,
-        "epochs": DEFAULT_EPOCHS,
-        "batch_size": DEFAULT_BATCH_SIZE,
-        "learning_rate": DEFAULT_LEARNING_RATE,
-        "weight_decay": DEFAULT_WEIGHT_DECAY,
+        "epochs": epochs,
+        "batch_size": batch_size,
+        "learning_rate": learning_rate,
+        "weight_decay": weight_decay,
         "source_class_weighting": SOURCE_CLASS_WEIGHTING,
         "hiba_view_weighting": HIBA_VIEW_WEIGHTING,
         "selection_metric": SELECTION_METRIC,
