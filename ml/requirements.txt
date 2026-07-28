@@ -1,10 +1,10 @@
 torch==2.13.0
 torchvision==0.28.0
 pillow==12.3.0
-numpy==2.4.6
-pandas==3.0.3
+numpy==2.5.1
+pandas==3.0.5
 matplotlib==3.11.1
-kaggle==2.2.3
+kaggle==2.2.4
 transformers==5.14.1
 huggingface_hub==1.24.0
 safetensors==0.8.0
